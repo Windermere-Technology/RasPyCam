@@ -1,0 +1,36 @@
+name: "Feature Request"
+description: "Suggest a new feature or enhancement"
+labels:
+  - feature
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the feature or enhancement in detail
+      placeholder: |
+        I would like to see '...' added to the application
+    validations:
+      required: true
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Information (Optional)
+      description: Provide any additional information that may be helpful
+      placeholder: |
+        - Screenshots
+        - Mockups
+        - Examples
+        - etc.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      description: Please check all that apply
+      options:
+        - label: I have not found any related feature requests
+          required: true
+        - label: I have not found this feature in the application
+          required: true
+        - label: I want to contribute to the development of this feature
+          required: false

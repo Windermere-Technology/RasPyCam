@@ -1,0 +1,119 @@
+name: Deployment
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release-cleanup:
+    name: Release Cleanup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+    
+      - name: Clear Git cache
+        run: |
+          git rm -r --cached .
+          git reset --hard
+
+      - name: Install jq
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Delete all draft releases and their tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          THIS_REPO: ${{ vars.THIS_REPO }}
+        run: |
+          releases=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v4+json" \
+            https://api.github.com/repos/$THIS_REPO/releases \
+            | jq -r '.[] | select(.draft == true) | .id,.tag_name')
+          if [ -n "$releases" ]; then
+            echo "$releases" | while read -r release_id && read -r tag_name; do
+              echo "Deleting draft release with tag: $tag_name (ID: $release_id)"
+              curl -s -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
+                -H "Accept: application/vnd.github.v4+json" \
+                https://api.github.com/repos/$THIS_REPO/releases/$release_id
+              git tag -d "$tag_name" || true
+              git push origin --delete "$tag_name" || true
+            done
+          else
+            echo "No draft releases found."
+          fi
+
+      - name: Delete tags without releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          THIS_REPO: ${{ vars.THIS_REPO }}
+        run: |
+          git fetch --tags
+          all_tags=$(git tag)
+          release_tags=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v4+json" \
+            https://api.github.com/repos/$THIS_REPO/releases \
+            | jq -r '.[].tag_name')
+          echo "$all_tags" | while read -r tag; do
+            if ! echo "$release_tags" | grep -q "$tag"; then
+              echo "Deleting tag: $tag (no associated release)"
+              git tag -d "$tag" || true
+              git push origin --delete "$tag" || true
+            fi
+          done
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: release-cleanup
+    steps:
+      - name: Checkout backend repository
+        uses: actions/checkout@v4
+
+      - name: Get latest tag
+        id: get_tag
+        run: |
+          git fetch --tags
+          latest_tag=$(git tag --sort=-v:refname | head -n 1)
+          echo "LATEST_TAG=$latest_tag" >> $GITHUB_ENV
+
+      - name: Bump version
+        id: bump_version
+        run: |
+          if [ -z "${{ env.LATEST_TAG }}" ]; then
+            echo "v1" > new_tag
+          else
+            version_number=$(echo "${{ env.LATEST_TAG }}" | grep -o '[0-9]*$')
+            new_version=$((version_number+1))
+            echo "v$new_version" > new_tag
+          fi
+          echo "NEW_TAG=$(cat new_tag)" >> $GITHUB_ENV
+
+      - name: Create new tag and release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          THIS_REPO: ${{ vars.THIS_REPO }}
+        run: |
+          new_tag=$(cat new_tag)
+          if git rev-parse "refs/tags/$new_tag" >/dev/null 2>&1; then
+            echo "Tag $new_tag already exists. Skipping tag creation."
+          else
+            git tag $new_tag
+            git push origin $new_tag
+          fi
+          response=$(curl -s -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v4+json" \
+            https://api.github.com/repos/$THIS_REPO/releases \
+            -d '{
+              "tag_name": "'${{ env.NEW_TAG }}'",
+              "name": "Release '${{ env.NEW_TAG }}'",
+              "prerelease": false,
+              "draft": true,
+              "generate_release_notes": true
+            }')
+          echo "$response" | jq -r '.upload_url' | sed 's/{?name,label}//' > upload_url

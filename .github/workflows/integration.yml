@@ -1,0 +1,152 @@
+name: Integration
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  check-runners:
+    if: github.event_name == 'push'
+    name: ARM Status
+    runs-on: ARM64
+    outputs:
+      arm_online: ${{ steps.set_outputs.outputs.arm_online }}
+    steps:
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install jq -y
+
+      - name: Fetch Runners
+        id: fetch_runners
+        env:
+          THIS_REPO: ${{ vars.THIS_REPO }}
+        run: |
+          response=$(curl -L \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/$THIS_REPO/actions/runners)
+          echo "$response" > runners.json
+
+      - name: Check ARM Runner
+        id: check_arm
+        run: |
+          if ! jq empty runners.json > /dev/null 2>&1; then
+            echo "Invalid JSON or null response"
+            arm_online="false"
+          else
+            arm_online=$(jq -r '
+              if (.runners? | length > 0) then
+                if (.runners[]? | select(.labels[]? | .name == "arm")? | .status == "online") then
+                  "true"
+                else
+                  "false"
+                end
+              else
+                "false"
+              end' runners.json)
+          fi
+  
+          echo "arm_online=$arm_online" >> $GITHUB_ENV
+
+      - name: Set Outputs
+        id: set_outputs
+        run: |
+          echo "arm_online=${{ env.arm_online }}" >> $GITHUB_OUTPUT
+          echo "ARM Runner Online: ${{ env.arm_online }}"
+
+  format:
+    if: github.event_name == 'push'
+    name: Format
+    runs-on: ARM64
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install black -y
+
+      - name: Format code
+        run: |
+          black .
+
+      - name: Commit and push formatted code
+        run: |
+          git config user.name "$(git log -n 1 --pretty=format:%an)"
+          git config user.email "$(git log -n 1 --pretty=format:%ae)"
+          git add .
+          git commit -m "BOT: formatting code" || echo "No changes to commit"
+          git push origin HEAD
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  lint:
+    name: Lint
+    runs-on: ARM64
+    needs: format
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install flake8 -y
+
+      - name: Lint code
+        run: |
+          flake8 --ignore=E501,W503 .
+
+  test-arm64:
+    name: Test (ARM64)
+    runs-on: ARM64
+    needs: lint
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install libcap-dev python3-pytest libopencv-dev -y
+          sudo apt-get install python3-opencv
+
+      - name: Test code
+        run: |
+          PYTHONPATH=./app pytest --import-mode=importlib tests/unit
+        timeout-minutes: 5
+
+  test-arm:
+    name: Test (ARM)
+    runs-on: ARM
+    needs: [lint, check-runners]
+    if: ${{ needs.check-runners.outputs.arm_online == 'true' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install libcap-dev python3-pytest libopencv-dev -y
+          sudo apt-get install python3-opencv
+
+      - name: Test code
+        run: |
+          PYTHONPATH=./app pytest --import-mode=importlib tests/unit
+        timeout-minutes: 5

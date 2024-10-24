@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+if [ "$1" = "--config" ] && [ "$2" != "" ]; then
+    echo 'Launching raspycam with configuration '$2 
+    python3 /opt/vc/bin/raspycam/main.py --config "$2" "$3">> /opt/vc/bin/raspycam/raspy.log 2>&1 &
+    sleep 1;echo $! > /opt/vc/bin/raspycam/raspy.pid
+else
+    echo "Launching raspycam with default configuration"
+    python3 /opt/vc/bin/raspycam/main.py --config /etc/raspimjpeg >> /opt/vc/bin/raspycam/raspy.log 2>&1 &
+    sleep 1;echo $! > /opt/vc/bin/raspycam/raspy.pid
+fi

@@ -1,0 +1,22 @@
+# Recordings Folder
+recordings/
+
+# Python Cache Folder and Files
+__pycache__/
+*.pyc
+
+# Python Test Cache Folder and Files
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Virtual Environment Folder
+venv/
+
+# Coverage Folder and Files
+.coverage
+coverage.xml
+coverage_html/
+
+# MacOS
+.DS_Store

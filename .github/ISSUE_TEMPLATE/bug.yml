@@ -1,0 +1,83 @@
+name: "Bug Report"
+description: "Alert the team to a bug in the application"
+labels:
+  - bug
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the bug in detail
+      placeholder: |
+        When I do '...', '...' happens.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Provide a step-by-step guide to reproduce the bug
+      placeholder: |
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+    validations:
+      required: false
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: Describe what you expected to happen
+      placeholder: |
+        I expected '...' to happen
+    validations:
+      required: false
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Information (Optional)
+      description: Provide any additional information that may be helpful
+      placeholder: |
+        - Screenshots
+        - Error messages / Logs
+        - Camera model
+        - etc.
+  - type: dropdown
+    id: pi
+    attributes:
+      label: Pi Model
+      description: Select the model of Raspberry Pi you are using
+      options:
+        - Zero
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+        - Other
+    validations:
+      required: false
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      description: Select the operating system version you are using
+      options: 
+        - Any Raspbian (9.x or older)
+        - Raspberry Pi OS Buster (10.x)
+        - Raspberry Pi OS Bullseye (11.x)
+        - Raspberry Pi OS Bookworm (12.x)
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      description: Please check all that apply
+      options:
+        - label: I have not found any related issues
+          required: true
+        - label: I have updated to the latest version
+          required: true
+        - label: I want to contribute a fix
+          required: false
