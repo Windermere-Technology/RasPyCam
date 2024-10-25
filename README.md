@@ -1,12 +1,17 @@
-<p align="center"><img src="https://github.com/user-attachments/assets/93d6a8fb-21c6-4bda-a876-72a2a61dc4da" height="90px" alt="RasPyCam Logo"></p>
+<p align="center"><img src="https://github.com/user-attachments/assets/68c603cb-b79c-474a-aca6-e18a6acbb23c" height="90px" alt="RasPyCam Logo"></p>
 
 <h1>Table of Contents</h1>
 
 - [Overview](#overview)
-- [Features](#features)
+- [Main Features](#main-features)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Usage](#usage)
+  - [Camera Control](#camera-control)
+  - [Image and Video Capture](#image-and-video-capture)
+  - [Motion Detection](#motion-detection)
+  - [Camera Settings](#camera-settings)
+  - [Configuration and Status](#configuration-and-status)
 - [Contributing](#contributing)
   - [Issues](#issues)
   - [Code Changes](#code-changes)
@@ -230,7 +235,3 @@ Initially devleoped as part of a University project overseen by [Cian Byrne](htt
 - [Harry Le (Lê Thành Nhân)](https://github.com/NhanDotJS)
 - [Chen-Don Loi](https://github.com/Chen-Loi)
 - [Qiuda (Richard) Song](https://github.com/RichardQiudaSong)
-
-<h1>License</h1>
-
-The source code for the RasPyCam application is licensed under the MIT License. As an individual, you are free to use, modify, and distribute the source code for personal use. However, you must include the original license and copyright information in your modified version.
