@@ -17,11 +17,10 @@
   - [Code Changes](#code-changes)
   - [Testing Changes](#testing-changes)
 - [Acknowledgements](#acknowledgements)
-- [License](#license)
 
 <h1>Overview</h1>
 
-RasPyCam is a python-based multi-stream camera system for the Raspberry Pi. This application has been designed as a replacement for the [RasPiCam](https://github.com/silvanmelchior/userland/tree/master/host_applications/linux/apps/raspicam) application developed by [Silvan Melchior](https://github.com/silvanmelchior) which is no longer maintained and has compatibility issues with the latest versions of the Raspberry Pi.
+RasPyCam is a python-based multi-stream camera system for the Raspberry Pi. This application has been designed as a replacement for the [RasPiCam](https://github.com/silvanmelchior/userland/tree/master/host_applications/linux/apps/raspicam) application developed by [Silvan Melchior](https://github.com/silvanmelchior), [Robert Tidey](https://github.com/roberttidey) and [others](https://github.com/silvanmelchior/RPi_Cam_Web_Interface/graphs/contributors) which is no longer maintained and has compatibility issues with the latest versions of the Raspberry Pi.
 
 There are two ways of using RasPyCam:
 
@@ -227,7 +226,7 @@ This command will run the testing suite and generate a coverage report. You can 
 
 <h1>Acknowledgements</h1>
 
-The development of this project was inspired by the [RasPiCam](https://github.com/silvanmelchior/userland/tree/master/host_applications/linux/apps/raspicam) application developed by [Silvan Melchior](https://github.com/silvanmelchior).
+The development of this project was inspired by the [RasPiCam](https://github.com/silvanmelchior/userland/tree/master/host_applications/linux/apps/raspicam) application developed by [Silvan Melchior](https://github.com/silvanmelchior), [Robert Tidey](https://github.com/roberttidey) and [others](https://github.com/silvanmelchior/RPi_Cam_Web_Interface/graphs/contributors).
 
 Initially devleoped as part of a University project overseen by [Cian Byrne](https://github.com/wallarug), the development team consisted of:
 
