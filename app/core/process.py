@@ -644,6 +644,8 @@ def start_background_process(config_filepath):
     # Set up the cameras
     cams = {}
     for index, c in enumerate(all_cameras):
+        if "Num" not in c:
+            c["Num"] = index
         if CameraCoreModel.main_camera is None:
             CameraCoreModel.main_camera = c["Num"]
         config_file = None
