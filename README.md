@@ -201,7 +201,7 @@ Filenames can be created with standard text alongside the following naming schem
 | %% | Literal % symbol in the filename |
 
 > [!NOTE]
-> The %a code will read the text from the `/dev/shm/mjpeg/user_annotate.txt` file. This file does not exist by default and must be created by the user. 
+> The `%a` code will read the text from the `/dev/shm/mjpeg/user_annotate.txt` file. This file does not exist by default and must be created by the user. 
 
 <h2>Stopping the Program</h2>
 
