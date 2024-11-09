@@ -1076,6 +1076,10 @@ class CameraCoreModel:
         name = name.replace("%s", seconds)
         name = name.replace("%u", millisecs)
         name = name.replace("%I", self.cam_index_str)
+
+        user_annotation = self.read_annotation_file()
+        name = name.replace("%a", user_annotation)
+
         return name.replace("%%", "%")
 
     def make_filecounts(self):
@@ -1197,3 +1201,14 @@ class CameraCoreModel:
         log_file = os.fdopen(log_fd, "a")
         log_file.write(contents)
         log_file.close()
+
+    def read_annotation_file(self):
+        """
+        Reads the user annotation from /dev/shm/mjpeg/user_annotate.txt if it exists.
+        Returns the file content or an empty string if the file is not found.
+        """
+        annotation_file_path = "/dev/shm/mjpeg/user_annotate.txt"
+        if os.path.exists(annotation_file_path):
+            with open(annotation_file_path, "r") as file:
+                return file.read().strip()
+        return ""
