@@ -1,0 +1,44 @@
+name: PR Labels
+
+on:
+  pull_request:
+    types: [opened, edited, labeled, unlabeled, synchronize]
+
+jobs:
+  labels:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for release label
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          release_labels=("major" "minor" "patch")
+          
+          response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "${{ github.event.pull_request.issue_url }}/labels")
+          
+          if ! echo "$response" | jq -e . > /dev/null 2>&1; then
+            echo "Error: Invalid JSON response from GitHub API"
+            echo "Response: $response"
+            exit 1
+          fi
+
+          labels=$(echo "$response" | jq -r '.[].name' 2> /dev/null)
+
+          release_label_count=0
+          for label in "${release_labels[@]}"; do
+            if echo "$labels" | grep -q "$label"; then
+              release_label_count=$((release_label_count + 1))
+            fi
+          done
+          
+          if [ "$release_label_count" -eq 0 ]; then
+            echo "Error: One of the release labels (${release_labels[*]}) must be added before merging."
+            exit 1
+          elif [ "$release_label_count" -gt 1 ]; then
+            echo "Error: Only one release label should be assigned to a pull request. Found $release_label_count release labels."
+            exit 1
+          else
+            echo "Valid release label found. Proceeding."
+          fi
