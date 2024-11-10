@@ -1,0 +1,217 @@
+name: Deployment
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release-cleanup:
+    name: Release Cleanup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+    
+      - name: Clear Git cache
+        run: |
+          git rm -r --cached .
+          git reset --hard
+
+      - name: Install jq
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Delete all draft releases and their tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          releases=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v4+json" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/releases" \
+            | jq -r '.[] | select(.draft == true) | .id,.tag_name')
+          if [ -n "$releases" ]; then
+            echo "$releases" | while read -r release_id && read -r tag_name; do
+              echo "Deleting draft release with tag: $tag_name (ID: $release_id)"
+              curl -s -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
+                -H "Accept: application/vnd.github.v4+json" \
+                "${{ github.api_url }}/repos/${{ github.repository }}/releases/$release_id"
+              git tag -d "$tag_name" || true
+              git push origin --delete "$tag_name" || true
+            done
+          else
+            echo "No draft releases found."
+          fi
+
+      - name: Delete tags without releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git fetch --tags
+          all_tags=$(git tag)
+          release_tags=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v4+json" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/releases" \
+            | jq -r '.[].tag_name')
+          echo "$all_tags" | while read -r tag; do
+            if ! echo "$release_tags" | grep -q "$tag"; then
+              echo "Deleting tag: $tag (no associated release)"
+              git tag -d "$tag" || true
+              git push origin --delete "$tag" || true
+            fi
+          done
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: release-cleanup
+    steps:
+      - name: Checkout backend repository
+        uses: actions/checkout@v4
+
+      - name: Check if commit has an associated PR and required label
+        id: check_pr_label
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pr_number=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" \
+            | jq -r '.[0].number')
+          
+          echo "PR Number: $pr_number"
+          
+          if [ -z "$pr_number" ] || [ "$pr_number" == "null" ]; then
+            echo "No PR associated with this commit. Skipping release."
+            echo "SKIP_RELEASE=true" >> $GITHUB_ENV
+          else
+            response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "${{ github.api_url }}/repos/${{ github.repository }}/issues/$pr_number/labels")
+            
+            echo "API response for labels: $response"
+            
+            if ! echo "$response" | jq -e . > /dev/null 2>&1; then
+              echo "Error: Invalid JSON response from GitHub API"
+              echo "Response: $response"
+              echo "SKIP_RELEASE=true" >> $GITHUB_ENV
+              exit 0
+            fi
+
+            pr_labels=$(echo "$response" | jq -r '.[].name')
+            echo "Parsed labels: $pr_labels"
+            
+            release_labels=("major" "minor" "patch")
+            label_found=false
+            for label in "${release_labels[@]}"; do
+              if echo "$pr_labels" | grep -q "$label"; then
+                label_found=true
+                break
+              fi
+            done
+            
+            if [ "$label_found" = false ]; then
+              echo "No required release label found. Skipping release."
+              echo "SKIP_RELEASE=true" >> $GITHUB_ENV
+            else
+              echo "Required release label found. Proceeding with release."
+              echo "SKIP_RELEASE=false" >> $GITHUB_ENV
+            fi
+          fi
+
+      - name: Get latest tag
+        if: env.SKIP_RELEASE != 'true'
+        id: get_tag
+        run: |
+          git fetch --tags
+          latest_tag=$(git tag --sort=-v:refname | head -n 1)
+          echo "LATEST_TAG=$latest_tag" >> $GITHUB_ENV
+
+      - name: Determine version increment based on event type
+        if: env.SKIP_RELEASE != 'true'
+        id: determine_bump
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pr_number=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" \
+            | jq -r '.[0].number')
+
+          response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/issues/$pr_number/labels")
+
+          pr_labels=$(echo "$response" | jq -r '.[].name')
+          echo "Parsed labels: $pr_labels"
+
+          bump_type=""
+          if echo "$pr_labels" | grep -q "major"; then
+            bump_type="major"
+          elif echo "$pr_labels" | grep -q "minor"; then
+            bump_type="minor"
+          elif echo "$pr_labels" | grep -q "patch"; then
+            bump_type="patch"
+          else
+            echo "No valid release label found. Skipping release."
+            echo "SKIP_RELEASE=true" >> $GITHUB_ENV
+            exit 0
+          fi
+
+          echo "BUMP_TYPE=$bump_type" >> $GITHUB_ENV
+          echo "Selected bump type: $bump_type"
+
+      - name: Bump version
+        if: env.SKIP_RELEASE != 'true'
+        id: bump_version
+        run: |
+          if [ -z "${{ env.LATEST_TAG }}" ]; then
+            new_version="1.0.0"
+          else
+            major=$(echo "${{ env.LATEST_TAG }}" | cut -d. -f1 | sed 's/v//')
+            minor=$(echo "${{ env.LATEST_TAG }}" | cut -d. -f2)
+            patch=$(echo "${{ env.LATEST_TAG }}" | cut -d. -f3)
+            
+            if [ "${{ env.BUMP_TYPE }}" = "major" ]; then
+              major=$((major + 1))
+              minor=0
+              patch=0
+            elif [ "${{ env.BUMP_TYPE }}" = "minor" ]; then
+              minor=$((minor + 1))
+              patch=0
+            else
+              patch=$((patch + 1))
+            fi
+            
+            new_version="v${major}.${minor}.${patch}"
+          fi
+          echo "NEW_TAG=$new_version" >> $GITHUB_ENV
+          echo "$new_version" > new_tag
+
+      - name: Create new tag and release
+        if: env.SKIP_RELEASE != 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          new_tag=$(cat new_tag)
+          if git rev-parse "refs/tags/$new_tag" >/dev/null 2>&1; then
+            echo "Tag $new_tag already exists. Skipping tag creation."
+          else
+            git tag $new_tag
+            git push origin $new_tag
+          fi
+          response=$(curl -s -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v4+json" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/releases" \
+            -d '{
+              "tag_name": "'${{ env.NEW_TAG }}'",
+              "name": "Release '${{ env.NEW_TAG }}'",
+              "prerelease": false,
+              "draft": true,
+              "generate_release_notes": true
+            }')
+          echo "$response" | jq -r '.upload_url' | sed 's/{?name,label}//' > upload_url
