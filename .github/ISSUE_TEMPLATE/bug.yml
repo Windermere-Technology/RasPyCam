@@ -1,7 +1,7 @@
 name: "Bug Report"
 description: "Alert the team to a bug in the application"
 labels:
-  - bug
+  - bugfix
 body:
   - type: textarea
     id: description
