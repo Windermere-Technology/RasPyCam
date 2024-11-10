@@ -91,6 +91,7 @@ class CameraCoreModel:
             "anno_text_origin": (30, 80),
             "anno_text_colour": (0, 0, 0),
             "anno_text_thickness": 5,
+            "user_annotate": "/dev/shm/mjpeg/user_annotate.txt",
             "sharpness": 1.0,
             "contrast": 1.0,
             "brightness": 0.0,
@@ -662,6 +663,10 @@ class CameraCoreModel:
             self.config["anno_text_thickness"] = int(
                 parsed_configs["anno_text_thickness"]
             )
+        
+        # Parse the user annotation file path.
+        if "user_annotate" in parsed_configs:
+            self.config["user_annotate"] = parsed_configs["user_annotate"]
 
         # Parse general camera configuration settings,
         if "sharpness" in parsed_configs:
@@ -1207,7 +1212,7 @@ class CameraCoreModel:
         Reads the user annotation from /dev/shm/mjpeg/user_annotate.txt if it exists.
         Returns the file content or an empty string if the file is not found.
         """
-        annotation_file_path = "/dev/shm/mjpeg/user_annotate.txt"
+        annotation_file_path = self.config.get("user_annotate", "/dev/shm/mjpeg/user_annotate.txt")
         if os.path.exists(annotation_file_path):
             with open(annotation_file_path, "r") as file:
                 return file.read().strip()
