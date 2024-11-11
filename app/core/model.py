@@ -611,7 +611,7 @@ class CameraCoreModel:
 
     def setup_video_encoder(self):
         """
-        Setup the encoder used for recording video (H264).
+	Setup the encoder used for recording video (H264).
         """
         self.video_encoder = H264Encoder(
             bitrate=self.config["video_bitrate"], framerate=self.config["mp4_fps"]

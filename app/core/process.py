@@ -130,9 +130,12 @@ def setup_fifo(path):
     try:
         os.read(CameraCoreModel.fifo_fd, CameraCoreModel.MAX_COMMAND_LEN)  # Flush pipe
     except BlockingIOError as e:
-        print("ERROR: FIFO pipe busy. " + str(e))
+        print("ERROR: setup_fifo(): FIFO pipe busy, cannot flush - " + str(e))
+        """
+        commented to allow the program to load despite a pipe error:
         os.close(CameraCoreModel.fifo_fd)  # Close the FIFO pipe
         return False
+        """
     return True
 
 
@@ -150,6 +153,7 @@ def parse_incoming_commands():
             # Read and validate incoming commands from the pipe
             incoming_cmd = read_pipe(fifo_fd)
         if incoming_cmd:
+            print("INFO: Got a piped command: " + str(incoming_cmd))
             # Add the valid command to the command queue
             with CameraCoreModel.cmd_queue_lock:
                 CameraCoreModel.command_queue.append(incoming_cmd)
@@ -217,7 +221,11 @@ def read_pipe(fd):
         Tuple of command and parameters if valid, otherwise False.
     """
     # Read the contents from the pipe and remove any trailing whitespace
-    contents = os.read(fd, CameraCoreModel.MAX_COMMAND_LEN)
+    try:
+        contents = os.read(fd, CameraCoreModel.MAX_COMMAND_LEN)
+    except BlockingIOError as e:
+        print("ERROR: read_pipe(): " + str(e))
+        return False
     contents_str = contents.decode().rstrip()
     cmd_code = contents_str[:2]  # Extract the command code (first 2 characters)
     cmd_param = contents_str[
@@ -225,6 +233,7 @@ def read_pipe(fd):
     ]  # Extract the command parameters (after first 2 characters)
     # Check if the command is valid based on predefined valid commands
     if len(contents_str) > 0:
+        print("INFO: read_pipe(): '" + contents_str + "'")
         # Check for group command (multiple cameras)
         if cmd_code[0] == "[":
             print("Group command received: " + contents_str)
