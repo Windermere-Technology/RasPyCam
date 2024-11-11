@@ -539,13 +539,13 @@ def execute_command(index, cams, threads, cmd_tuple):
                 timelapse_on = True
                 timelapse_count = 1
                 update_status_file(cams[CameraCoreModel.main_camera])
-                print("Timelapse started\n");
+                print("Timelapse started");
             elif int(cmd_param) == 0:
                 timelapse_on = False
                 update_status_file(cams[CameraCoreModel.main_camera])
-                print("Timelapse stopped\n");
+                print("Timelapse stopped");
             else
-                print("ERROR: Invalid 'tl' argument")
+                print(f"ERROR: Invalid 'tl' argument: {cmd_param}")
         elif cmd_code == "tv": # set timelapse interval
             print(
                 "Setting timelapse interval"
