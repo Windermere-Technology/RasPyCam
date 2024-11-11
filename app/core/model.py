@@ -172,7 +172,7 @@ class CameraCoreModel:
         self.motion_detection = False  # Flag for motion detection mode status
 
         self.timelapse_on = False  # Flag for timelapse mode
-        self.lapse_count = 0 # Clear timelapse sequence number
+        self.timelapse_count = 0 # Clear timelapse sequence number
         self.detected_motion = False  # Flag for whether motion has been detected by MD.
         self.motion_still_count = (
             0  # Counter for number of consecutive frames with no motion.
