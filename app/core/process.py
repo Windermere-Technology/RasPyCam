@@ -546,6 +546,20 @@ def execute_command(index, cams, threads, cmd_tuple):
                 print("Timelapse stopped\n");
             else
                 print("ERROR: Invalid 'tl' argument")
+        elif cmd_code == "tv": # set timelapse interval
+            print(
+                "Setting timelapse interval"
+            )  # 'tv' stands for "timelapse interval"
+            new_tl_interval = model.config["tl_interval"]
+            try:
+                new_tl_interval = int(cmd_param)
+                if (new_tl_interval < 1) or (new_tl_interval > (24*60*60)):
+                    print("ERROR: timelapse interval must be between 1 and (24*60*60) seconds.")
+                else:
+                    model.config["tl_interval"] = new_tl_interval
+                    success = True
+            except ValueError:
+                print("ERROR: tv Value is not an integer")
         elif cmd_code in requires_full_restart:
             print(f"Altering camera {num} configuration")
             # These need the encoder to be fully stopped to work.
@@ -709,7 +723,7 @@ def start_background_process(config_filepath):
         start_preview_md_threads(threads)
 
     # Initialize the timelapse timer that periodically triggers the image capture.
-    tl_interval = int(model.config["timelapse_interval"]) * 100
+    tl_interval = int(model.config["tl_interval"]) * 100
     timelapse_timer = tl_interval
 
     # Execute commands off the queue as they come in.
