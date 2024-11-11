@@ -892,6 +892,12 @@ class CameraCoreModel:
             else:
                 self.config["solo_stream_mode"] = False
 
+        # timelapse settings
+        if "tl_interval" in parsed_configs:
+            self.config["tl_interval"] = (
+                int(parsed_configs["tl_interval"])
+            )
+
     def read_user_config(self):
         """Loads the settings for the user config file into the write_to_configs dict
         in order to ready for writing into the file.
