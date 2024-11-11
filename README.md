@@ -12,6 +12,8 @@
   - [Motion Detection](#motion-detection)
   - [Camera Settings](#camera-settings)
   - [Configuration and Status](#configuration-and-status)
+  - [Filename Creation](#filename-creation)
+  - [Stopping the Program](#stopping-the-program)
 - [Contributing](#contributing)
   - [Issues](#issues)
   - [Code Changes](#code-changes)
@@ -109,74 +111,99 @@ sudo su -c "echo '{command} {parameter}' >> /var/www/html/FIFO" www-data
 
 Currently the program supports the following commands:
 
-<h3>Camera Control</h3>
+<h2>Camera Control</h2>
 
-| Command | Parameter | Description                                                                                                                                                              |
-| ------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `ru`    | 1/0       | Starts (1) or stops (0) the camera. The program continues to run while the camera is stopped, but the only accepted command will be `ru 1` to restart.                   |
-| `cn`    | {number}  | Changes the main camera to the specified number. The number corresponds to the slot index of Picam2's `all_cameras()` function.                                          |
-| `fl`    | 0/1/2/3   | Sets horizontal and vertical flip. The parameters are: no flip (0), horizontal flip (1), vertical flip (2), and both horizontal and vertical flip (3). The default is 0. |
-| `dp`    | 1/0       | Enables (1) or disables (0) the camera preview. If multiple cameras have previews enabled and share the same image height, they will be stitched together horizontally.  |
+| Command | Parameter | Description |
+| --- | --- | --- |
+| `ru` | 1/0 | Starts (1) or stops (0) the camera. The program continues to run while the camera is stopped, but the only accepted command will be `ru 1` to restart. |
+| `cn` | {number} | Changes the main camera to the specified number. The number corresponds to the slot index of Picam2's `all_cameras()` function. |
+| `fl` | 0/1/2/3 | Sets horizontal and vertical flip. The parameters are: no flip (0), horizontal flip (1), vertical flip (2), and both horizontal and vertical flip (3). The default is 0. |
+| `dp` | 1/0 | Enables (1) or disables (0) the camera preview. If multiple cameras have previews enabled and share the same image height, they will be stitched together horizontally. |
 
-<h3>Image and Video Capture</h3>
+<h2>Image and Video Capture</h2>
 
-| Command   | Parameter      | Description                                                                                                                                                                                                                                                                                               |
-| --------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ca`      | 1/0 {duration} | Starts (1) or stops (0) video recording. Optionally, you can specify a duration in seconds.                                                                                                                                                                                                               |
-| `im`      |                | Takes a still image at current sensor resolution and image size.                                                                                                                                                                                                                                          |
-| `[im+im]` | \<v/h\>        | Takes a stitched image from all available cameras at their current resolutions and image sizes. You can either vertically (v) stitch or horizontally (h) stitch the feeds. If no axis is specified, stitching will be done horizontally.                                                                  |
-| `ix`      |                | Captures an image at the maximum possible sensor resolution and image size, by switching camera configurations and then switching back. Will restart cameras.                                                                                                                                             |
-| `[ix+ix]` | \<v/h\>        | Captures a stitched image from all available cameras at the maximum resolution, by switching their configurations and then switching back. You can either vertically (v) stitch or horizontally (h) stitch the feeds. If no axis is specified, stitching will be done horizontally. Will restart cameras. |
+| Command | Parameter | Description |
+| --- | --- | --- |
+| `ca` | 1/0 {duration} | Starts (1) or stops (0) video recording. Optionally, you can specify a duration in seconds. |
+| `im` | | Takes a still image at current sensor resolution and image size. |
+| `[im+im]` | \<v/h\> | Takes a stitched image from all available cameras at their current resolutions and image sizes. You can either vertically (v) stitch or horizontally (h) stitch the feeds. If no axis is specified, stitching will be done horizontally. |
+| `ix` | | Captures an image at the maximum possible sensor resolution and image size, by switching camera configurations and then switching back. Will restart cameras. |
+| `[ix+ix]` | \<v/h\> | Captures a stitched image from all available cameras at the maximum resolution, by switching their configurations and then switching back. You can either vertically (v) stitch or horizontally (h) stitch the feeds. If no axis is specified, stitching will be done horizontally. Will restart cameras. |
 
-<h3>Motion Detection</h3>
+<h2>Motion Detection</h2>
 
-| Command | Parameter | Description                                                                                                  |
-| ------- | --------- | ------------------------------------------------------------------------------------------------------------ |
-| `md`    | 1/0       | Starts (1) or stops (0) motion detection.                                                                    |
-| `mx`    | 0/2       | Switches the motion detection mode between internal (0) detection and monitor mode (2).                      |
-| `mt`    | {value}   | Sets motion detection parameters for threshold.                                                              |
-| `ms`    | {value}   | Sets motion detection parameters for number of frames to delay just after turning on motion detection.       |
-| `mb`    | {value}   | Sets motion detection parameters for number of frames of detected motion needed to register start of motion. |
-| `me`    | {value}   | Sets motion detection parameters for number of frames without motion needed to register end of motion.       |
+| Command | Parameter | Description |
+| --- | --- | --- |
+| `md` | 1/0 | Starts (1) or stops (0) motion detection. |
+| `mx` | 0/2 | Switches the motion detection mode between internal (0) detection and monitor mode (2). |
+| `mt` | {value} | Sets motion detection parameters for threshold. |
+| `ms` | {value} | Sets motion detection parameters for number of frames to delay just after turning on motion detection. |
+| `mb` | {value} | Sets motion detection parameters for number of frames of detected motion needed to register start of motion. |
+| `me` | {value} | Sets motion detection parameters for number of frames without motion needed to register end of motion. |
 
-<h3>Camera Settings</h3>
+<h2>Camera Settings</h2>
 
-| Command | Parameter                                                                           | Description                                                                                                                                  |
-| ------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bi`    | {bitrate}                                                                           | Sets the video bitrate (must be between 0 and 25,000,000).                                                                                   |
-| `sh`    | {value}                                                                             | Sets the sharpness of the camera.                                                                                                            |
-| `co`    | {value}                                                                             | Sets the contrast of the camera.                                                                                                             |
-| `br`    | {value}                                                                             | Sets the brightness of the camera.                                                                                                           |
-| `sa`    | {value}                                                                             | Sets the saturation of the camera.                                                                                                           |
-| `wb`    | {value}                                                                             | Sets the white balance mode of the camera.                                                                                                   |
-| `ag`    | {value}                                                                             | Sets the analog (colour) gain of the camera.                                                                                                 |
-| `ss`    | {value}                                                                             | Sets the shutter speed (exposure time) of the camera.                                                                                        |
-| `an`    | {value}                                                                             | Sets the annotation text on the camera feed.                                                                                                 |
-| `ec`    | {value}                                                                             | Sets exposure compensation.                                                                                                                  |
-| `is`    | {value}                                                                             | Sets the ISO level.                                                                                                                          |
-| `qu`    | {value}                                                                             | Sets the JPEG image quality (1-100).                                                                                                         |
-| `pv`    | {quality} {width} {divider} \<height\>                                              | Adjusts preview settings. Height is optional, if not specified, will automatically set height based on width according to 16:9 aspect ratio. |
-| `px`    | {video width} {video height} {video fps} {encoder fps} {image width} {image height} | Adjusts video and image settings in bulk. Will restart cameras.                                                                              |
+| Command | Parameter | Description |
+| --- | --- | --- |
+| `bi` | {bitrate} | Sets the video bitrate (must be between 0 and 25,000,000). |
+| `sh` | {value} | Sets the sharpness of the camera. |
+| `co` | {value} | Sets the contrast of the camera. |
+| `br` | {value} | Sets the brightness of the camera. |
+| `sa` | {value} | Sets the saturation of the camera. |
+| `wb` | {value} | Sets the white balance mode of the camera. |
+| `ag` | {value} | Sets the analog (colour) gain of the camera. |
+| `ss` | {value} | Sets the shutter speed (exposure time) of the camera. |
+| `an` | {value} | Sets the annotation text on the camera feed. See [Filename Creation](#filename-creation) for more details |
+| `ec` | {value} | Sets exposure compensation. |
+| `is` | {value} | Sets the ISO level. |
+| `qu` | {value} | Sets the JPEG image quality (1-100). |
+| `pv` | {quality} {width} {divider} \<height\> | Adjusts preview settings. Height is optional, if not specified, will automatically set height based on width according to 16:9 aspect ratio. |
+| `px` | {video width} {video height} {video fps} {encoder fps} {image width} {image height} | Adjusts video and image settings in bulk. Will restart cameras. |
 
-<h3>Configuration and Status</h3>
+<h2>Configuration and Status</h2>
 
-| Command | Parameter                             | Description                                                                                                                                                                                                        |
-| ------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `rs`    |                                       | Resets the user configuration file as specified in the initially supplied config's `user_config` setting and reloads the camera instance’s settings from the initially supplied config file. Will restart cameras. |
-| `sc`    |                                       | Recounts and updates the internal tally of image and video files in the output folders.                                                                                                                            |
-| `cr`    | {width height}                        | Changes the camera sensor resolution. Will restart cameras.                                                                                                                                                        |
-| `cs`    | i/v/i+v {width height} {width height} | Changes image (i), video (v), or both (i+v) stream sizes. Specifying the second set of width and height only needs to be done when using i+v. Will restart cameras.                                                |
-| `1s`    | 0/1/2                                 | Switches to solo stream mode (1), optionally sets to the maximum sensor resolution if (2) is provided or switches off solo stream mode (0). Will restart cameras.                                                  |
+| Command | Parameter | Description |
+| --- | --- | --- |
+| `rs` | | Resets the user configuration file as specified in the initially supplied config's `user_config` setting and reloads the camera instance’s settings from the initially supplied config file. Will restart cameras. |
+| `sc` | | Recounts and updates the internal tally of image and video files in the output folders. |
+| `cr` | {width height} | Changes the camera sensor resolution. Will restart cameras. |
+| `cs` | i/v/i+v {width height} {width height} | Changes image (i), video (v), or both (i+v) stream sizes. Specifying the second set of width and height only needs to be done when using i+v. Will restart cameras. |
+| `1s` | 0/1/2 | Switches to solo stream mode (1), optionally sets to the maximum sensor resolution if (2) is provided or switches off solo stream mode (0). Will restart cameras. |
 
 If the program is initated without a specified configuration file, the program will utilise the following paths for inputs and outputs:
 | Type | Path |
-|------|------|
+| --- | --- |
 | Preview | /tmp/preview/cam*preview.jpg |
 | Videos | /tmp/media/vi_cam%I*%v*%Y%M%D*%h%m%s.mp4 |
 | Stills | /tmp/media/im*cam%I*%i*%Y%M%D*%h%m%s.jpg |
 | Status File | /tmp/status_mjpeg.txt |
 
 > Command names, parameters and paths have been sourced from the [RPi Cam Web Interface](https://github.com/silvanmelchior/RPi_Cam_Web_Interface) system to ensure compatibility. In addition to the existing naming scheme used to interpolate values into filenames, the code %I can be used to refer a camera's index number.
+
+<h2>Filename Creation</h2>
+
+Filenames can be created with standard text alongside the following naming scheme:
+
+| Code | Description |
+| --- | --- |
+| %Y | Four-digit year (e.g., 2023) |
+| %y | Two-digit year (e.g., 23) |
+| %M | Month (01-12) |
+| %D | Day of the month (01-31) |
+| %h | Hour (00-23) |
+| %m | Minute (00-59) |
+| %s | Second (00-59) |
+| %u | Milliseconds (000-999) |
+| %i | Image index (increments with each image captured) |
+| %v | Video index (increments with each video recorded) |
+| %I | Camera index, indicating the camera number if multiple cameras are used |
+| %a | Custom annotation text, provided by the user |
+| %% | Literal % symbol in the filename |
+
+> [!NOTE]
+> The `%a` code will read the text from the `/dev/shm/mjpeg/user_annotate.txt` file by default. This file must be created by the user. You may change this default path in the configuration file by adjusting the `user_annotate` parameter.
+
+<h2>Stopping the Program</h2>
 
 To stop the program, you can either send SIGINT or SIGTERM signals to the program. This can be done by either pressing `Ctrl+C` in the terminal running the program or by using the `kill` command.
 
