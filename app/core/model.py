@@ -63,6 +63,7 @@ class CameraCoreModel:
         "wb": "white_balance",
         "ag": ["autowbgain_r", "autowbgain_b"],
         "tl": "timelapse_start_stop",
+        "tv": "tl_interval",
     }
 
     debug_execution_time = None
@@ -139,6 +140,7 @@ class CameraCoreModel:
             "motion_logfile": "/tmp/motionLog.txt",  # Log file recording motion events during Monitor mode.
             "picam_buffer_count": 2,
             "solo_stream_mode": False,
+            "tl_interval": 30, # timelapse interval in seconds
         }
 
         self.write_to_config = (
