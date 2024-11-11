@@ -534,6 +534,18 @@ def execute_command(index, cams, threads, cmd_tuple):
                 success = True
             except ValueError:
                 print("Invalid values for settings")
+        elif cmd_code == "tl":  # Start or stop the gathering of timelapse images.
+            if int(cmd_param) == 1:
+                timelapse_on = True
+                timelapse_count = 1
+                update_status_file(cams[CameraCoreModel.main_camera])
+                print("Timelapse started\n");
+            elif int(cmd_param) == 0:
+                timelapse_on = False
+                update_status_file(cams[CameraCoreModel.main_camera])
+                print("Timelapse stopped\n");
+            else
+                print("ERROR: Invalid 'tl' argument")
         elif cmd_code in requires_full_restart:
             print(f"Altering camera {num} configuration")
             # These need the encoder to be fully stopped to work.
