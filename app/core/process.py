@@ -732,7 +732,25 @@ def start_background_process(config_filepath):
                     toggle_cam_record(cam, False)
                     cam.record_until = None
                     print("Video recording duration complete.")
-        time.sleep(0.01)  # Small delay before next iteration
+       # Capture timelapse images
+       """ original code in RaspiMJPEG.c:
+       if(timelapse) {
+         tl_cnt++;
+         if(tl_cnt >= cfg_val[c_tl_interval]) {
+            if(i_capturing == 0) {
+               capt_img();
+               tl_cnt = 0;
+            }
+         }
+      }
+      """
+      if timelapse_on:
+          timelapse_count = timelapse_count + 1
+          if (timelapse_count > tl_interval):
+              image_capture()
+              timelapse_count = 0
+
+      time.sleep(0.01)  # Small delay before next iteration
 
     print("Shutting down gracefully...")
     for cam_index in cams:
