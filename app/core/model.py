@@ -1141,7 +1141,7 @@ class CameraCoreModel:
                 if filetype == "v":
                     video_count = max(video_count, count)
                 elif filetype == "t":
-                    tl_count = max(timelapse_count, count)
+                    tl_count = max(tl_count, count)
                 else:
                     image_count = max(image_count, count)
 
