@@ -708,6 +708,10 @@ def start_background_process(config_filepath):
     if cams[CameraCoreModel.main_camera].current_status != "halted":
         start_preview_md_threads(threads)
 
+    # Initialize the timelapse timer that periodically triggers the image capture.
+    tl_interval = int(model.config["timelapse_interval"]) * 100
+    timelapse_timer = tl_interval
+
     # Execute commands off the queue as they come in.
     while CameraCoreModel.process_running:
         # Check if mutex lock can be acquired (i.e. FIFO thread is not writing to the command queue)
@@ -732,23 +736,23 @@ def start_background_process(config_filepath):
                     toggle_cam_record(cam, False)
                     cam.record_until = None
                     print("Video recording duration complete.")
-       # Capture timelapse images
-       """ original code in RaspiMJPEG.c:
-       if(timelapse) {
-         tl_cnt++;
-         if(tl_cnt >= cfg_val[c_tl_interval]) {
-            if(i_capturing == 0) {
-               capt_img();
-               tl_cnt = 0;
-            }
-         }
-      }
-      """
-      if timelapse_on:
-          timelapse_count = timelapse_count + 1
-          if (timelapse_count > tl_interval):
-              image_capture()
-              timelapse_count = 0
+        # Capture timelapse images
+        """ original code in RaspiMJPEG.c:
+        if(timelapse) {
+          tl_cnt++;
+          if(tl_cnt >= cfg_val[c_tl_interval]) {
+             if(i_capturing == 0) {
+                capt_img();
+                 tl_cnt = 0;
+             }
+          }
+       } 
+       """
+       if timelapse_on:
+           timelapse_timer = timelapse_timer + 1
+           if (timelapse_timer > tl_interval:
+               capture_still_image(model)
+               timelapse_timer = 0
 
       time.sleep(0.01)  # Small delay before next iteration
 
