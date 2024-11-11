@@ -62,6 +62,7 @@ class CameraCoreModel:
         "1s": "solo_stream_mode",
         "wb": "white_balance",
         "ag": ["autowbgain_r", "autowbgain_b"],
+        "tl": "timelapse_start_stop",
     }
 
     debug_execution_time = None
@@ -110,7 +111,7 @@ class CameraCoreModel:
             "divider": 1,
             "preview_quality": 50,
             "image_output_path": "/tmp/media/im_cam%I_%i_%Y%M%D_%h%m%s.jpg",
-            "lapse_output_path": "/tmp/media/tl_cam%I_%i_%t_%Y%M%D_%h%m%s.jpg",
+            "lapse_output_path": "/tmp/media/tl_cam%I_%t_%i_%Y%M%D_%h%m%s.jpg",
             "video_output_path": "/tmp/media/vi_cam%I_%v_%Y%M%D_%h%m%s.mp4",
             "media_path": "/tmp/media",
             "status_file": "/tmp/status_mjpeg.txt",
@@ -155,6 +156,7 @@ class CameraCoreModel:
 
         self.still_image_index = 0  # Next image file index, based on count of image files in output directory.
         self.video_file_index = 0  # Next video file index, based on count of video files in output directory.
+        self.timelapse_index = 0  # Next timelapse file index, based on highest timelapse index found in the thumbnails in output directory.
         self.capturing_still = (
             False  # Flag for whether still image capture is in progress
         )
@@ -170,6 +172,7 @@ class CameraCoreModel:
         self.motion_detection = False  # Flag for motion detection mode status
 
         self.timelapse_on = False  # Flag for timelapse mode
+        self.lapse_count = 0 # Clear timelapse sequence number
         self.detected_motion = False  # Flag for whether motion has been detected by MD.
         self.motion_still_count = (
             0  # Counter for number of consecutive frames with no motion.
@@ -1069,9 +1072,11 @@ class CameraCoreModel:
         millisecs = "%03d" % round(current_dt.microsecond / 1000)
         img_index = "%04d" % self.still_image_index
         vid_index = "%04d" % self.video_file_index
+        tl_index = "%04d" % self.timelapse_index
 
         name = name.replace("%v", vid_index)
         name = name.replace("%i", img_index)
+        name = name.replace("%t", tl_index)
         name = name.replace("%y", year_2d)
         name = name.replace("%Y", year_4d)
         name = name.replace("%M", month)
@@ -1095,6 +1100,7 @@ class CameraCoreModel:
         those, by looking at the highest existing number for the type."""
         image_count = 0
         video_count = 0
+        timelapse_count = 0
         # Find all thumbnails.
         all_files = os.listdir(os.path.dirname(self.config["image_output_path"]))
         all_files.extend(os.listdir(os.path.dirname(self.config["video_output_path"])))
@@ -1126,12 +1132,15 @@ class CameraCoreModel:
                 # Start counting from the highest count even if missing numbers.
                 if filetype == "v":
                     video_count = max(video_count, count)
+                elif filetype == "t":
+                    timelapse_count = max(timelapse_count, count)
                 else:
                     image_count = max(image_count, count)
 
         # Set the indexes to one greater than the last existing count.
         self.still_image_index = image_count + 1
         self.video_file_index = video_count + 1
+        self.timelapse_index = timelapse_count + 1
 
     def generate_thumbnail(self, filetype, filepath):
         """Generates a thumbnail for a file of the given type and path.
@@ -1151,9 +1160,12 @@ class CameraCoreModel:
             )
             cv2.imwrite(self.config["preview_path"], blank_thumbnail)
         count = None
-        if (filetype == "i") or (filetype == "t"):
+        if (filetype == "i"):
             count = self.still_image_index
             self.still_image_index += 1
+        elif (filetype == "t"):
+            count = self.timelapse_index
+            self.timelapse_index += 1
         elif filetype == "v":
             count = self.video_file_index
             self.video_file_index += 1
