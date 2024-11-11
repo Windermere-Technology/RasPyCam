@@ -1077,8 +1077,8 @@ class CameraCoreModel:
         tl_index = "%04d" % self.timelapse_index
 
         name = name.replace("%v", vid_index)
-        name = name.replace("%i", img_index)
         name = name.replace("%t", tl_index)
+        name = name.replace("%i", img_index)
         name = name.replace("%y", year_2d)
         name = name.replace("%Y", year_4d)
         name = name.replace("%M", month)
@@ -1102,7 +1102,7 @@ class CameraCoreModel:
         those, by looking at the highest existing number for the type."""
         image_count = 0
         video_count = 0
-        timelapse_count = 0
+        tl_count = 0
         # Find all thumbnails.
         all_files = os.listdir(os.path.dirname(self.config["image_output_path"]))
         all_files.extend(os.listdir(os.path.dirname(self.config["video_output_path"])))
@@ -1135,14 +1135,14 @@ class CameraCoreModel:
                 if filetype == "v":
                     video_count = max(video_count, count)
                 elif filetype == "t":
-                    timelapse_count = max(timelapse_count, count)
+                    tl_count = max(timelapse_count, count)
                 else:
                     image_count = max(image_count, count)
 
         # Set the indexes to one greater than the last existing count.
         self.still_image_index = image_count + 1
         self.video_file_index = video_count + 1
-        self.timelapse_index = timelapse_count + 1
+        self.timelapse_index = tl_count + 1
 
     def generate_thumbnail(self, filetype, filepath):
         """Generates a thumbnail for a file of the given type and path.
