@@ -12,7 +12,7 @@ def capture_still_image(cam):
     # Generate the output file name
     if (timelapse_on)
         image_path = cam.make_filename(
-            cam.config["timelapse_output_path"]
+            cam.config["lapse_output_path"]
         )  # Generate output file name
     else
         image_path = cam.make_filename(
