@@ -10,6 +10,7 @@
   - [Camera Control](#camera-control)
   - [Image and Video Capture](#image-and-video-capture)
   - [Motion Detection](#motion-detection)
+  - [Timelapse Feature](#timelapse-feature)
   - [Camera Settings](#camera-settings)
   - [Configuration and Status](#configuration-and-status)
   - [Filename Creation](#filename-creation)
