@@ -10,6 +10,7 @@
   - [Camera Control](#camera-control)
   - [Image and Video Capture](#image-and-video-capture)
   - [Motion Detection](#motion-detection)
+  - [Timelapse Feature](#timelapse-feature)
   - [Camera Settings](#camera-settings)
   - [Configuration and Status](#configuration-and-status)
   - [Filename Creation](#filename-creation)
@@ -35,6 +36,7 @@ There are two ways of using RasPyCam:
 - **Image Capture**: Capture images from the connected camera.
 - **Video Recording**: Record videos from the connected camera.
 - **Motion Detection**: Detect motion in the camera feed.
+- **Timelapse Image Capture**: Capture periodic images from the connected camera.
 - **Multi-Stream Support**: Stream multiple camera feeds simultaneously from the connected camera.
 - **Web Interface Support**: Interact with the program using the [RPi Cam Web Interface](https://github.com/silvanmelchior/RPi_Cam_Web_Interface) system.
 
@@ -141,6 +143,13 @@ Currently the program supports the following commands:
 | `mb` | {value} | Sets motion detection parameters for number of frames of detected motion needed to register start of motion. |
 | `me` | {value} | Sets motion detection parameters for number of frames without motion needed to register end of motion. |
 
+<h2>Timelapse Feature</h2>
+
+| Command | Parameter | Description |
+| --- | --- | --- |
+| `tl` | 1/0 | Starts (1) or stops (0) timelapse. |
+| `tv` | {value} | Sets the timelapse image time interval (in units of .1 seconds) |
+
 <h2>Camera Settings</h2>
 
 | Command | Parameter | Description |
@@ -196,6 +205,7 @@ Filenames can be created with standard text alongside the following naming schem
 | %u | Milliseconds (000-999) |
 | %i | Image index (increments with each image captured) |
 | %v | Video index (increments with each video recorded) |
+| %t | Timelapse fileset index (increments with each new set of timelapse images captured) |
 | %I | Camera index, indicating the camera number if multiple cameras are used |
 | %a | Custom annotation text, provided by the user |
 | %% | Literal % symbol in the filename |
