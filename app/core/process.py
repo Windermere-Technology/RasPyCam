@@ -757,8 +757,7 @@ def execute_macro_command(model, script_name, args):
         print(f"ERROR: Script {script_path} is not executable.")
         return False
 
-    # Construct the command with 'www-data' user context
-    command = ["sudo", "-u", "www-data", script_path] + args
+    command = [script_path] + args
 
     try:
         result = subprocess.run(command, check=True, capture_output=True, text=True)
