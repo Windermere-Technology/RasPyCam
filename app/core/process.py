@@ -736,10 +736,11 @@ def start_background_process(config_filepath):
         update_status_file(cam)  # Update the status file with halted status
     os.close(CameraCoreModel.fifo_fd)  # Close the FIFO pipe
 
+
 def execute_macro_command(script_name, args):
     """
     Executes a macro script located in /var/www/html/macros/ with specified arguments.
-    
+
     Args:
         script_name (str): The name of the macro script file (e.g., "somemacro.sh").
         args (list): List of arguments to pass to the script.
