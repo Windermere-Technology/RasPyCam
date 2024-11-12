@@ -14,7 +14,7 @@ on:
 
 jobs:
   format:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref != 'refs/heads/main'
     name: Format
     runs-on: ubuntu-latest
     steps:
