@@ -557,8 +557,8 @@ def execute_command(index, cams, threads, cmd_tuple):
             new_tl_interval = model.config["tl_interval"]
             try:
                 new_tl_interval = int(cmd_param)
-                if (new_tl_interval < 1) or (new_tl_interval > (24*60*60)):
-                    print("ERROR: timelapse interval must be between 1 and (24*60*60) seconds.")
+                if (new_tl_interval < 1) or (new_tl_interval > (24*60*60*10)):
+                    print("ERROR: timelapse interval must be between 1 and (24*60*60*10).")
                 else:
                     model.config["tl_interval"] = new_tl_interval
                     success = True
