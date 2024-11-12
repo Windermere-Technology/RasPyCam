@@ -28,7 +28,7 @@ def capture_still_image(cam):
     cam.picam2.helpers.save(img_rgb, metadata, image_path)
 
     if cam.timelapse_on:
-        if (cam.timelapse_count == 1):
+        if cam.timelapse_count == 1:
             # Save a thumbnail for this image.
             cam.generate_thumbnail("t", image_path)
         cam.timelapse_count += 1
