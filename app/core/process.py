@@ -530,7 +530,7 @@ def execute_command(index, cams, threads, cmd_tuple):
             parts = cmd_param.split(" ")
             script_name = parts[0]
             args = parts[1:] if len(parts) > 1 else []
-            success = execute_macro_command(script_name, args)
+            success = execute_macro_command(model, script_name, args)
             if success:
                 print(f"Successfully executed macro: {script_name} with args: {args}")
             return
@@ -737,16 +737,16 @@ def start_background_process(config_filepath):
     os.close(CameraCoreModel.fifo_fd)  # Close the FIFO pipe
 
 
-def execute_macro_command(script_name, args):
+def execute_macro_command(model, script_name, args):
     """
-    Executes a macro script located in /var/www/html/macros/ with specified arguments.
+    Executes a macro script from the directory specified in the model's configuration.
 
     Args:
+        model (CameraCoreModel): The camera model instance containing configuration details.
         script_name (str): The name of the macro script file (e.g., "somemacro.sh").
         args (list): List of arguments to pass to the script.
     """
-    # Define the base directory for macros and construct the full script path
-    macros_dir = "/var/www/html/macros"
+    macros_dir = model.config.get("macros_path", "/var/www/html/macros")
     script_path = os.path.join(macros_dir, script_name)
 
     # Check if the script exists and is executable
@@ -761,7 +761,6 @@ def execute_macro_command(script_name, args):
     command = ["sudo", "-u", "www-data", script_path] + args
 
     try:
-        # Execute the script with the provided arguments
         result = subprocess.run(command, check=True, capture_output=True, text=True)
         print(f"Script output:\n{result.stdout}")
         return True
