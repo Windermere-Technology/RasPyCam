@@ -140,7 +140,7 @@ class CameraCoreModel:
             "motion_logfile": "/tmp/motionLog.txt",  # Log file recording motion events during Monitor mode.
             "picam_buffer_count": 2,
             "solo_stream_mode": False,
-            "tl_interval": 30, # timelapse interval in seconds
+            "tl_interval": 300, # timelapse interval in .1 second units
         }
 
         self.write_to_config = (
@@ -158,7 +158,7 @@ class CameraCoreModel:
 
         self.still_image_index = 0  # Next image file index, based on count of image files in output directory.
         self.video_file_index = 0  # Next video file index, based on count of video files in output directory.
-        self.timelapse_index = 0  # Next timelapse file index, based on highest timelapse index found in the thumbnails in output directory.
+        self.timelapse_index = 0  # Next timelapse fileset index, based on highest timelapse index found in the thumbnails in output directory.
         self.capturing_still = (
             False  # Flag for whether still image capture is in progress
         )
@@ -1078,7 +1078,10 @@ class CameraCoreModel:
         minute = "%02d" % current_dt.minute
         seconds = "%02d" % current_dt.second
         millisecs = "%03d" % round(current_dt.microsecond / 1000)
-        img_index = "%04d" % self.still_image_index
+        if self.timelapse_on:
+            img_index = "%04d" % self.timelapse_count
+        else:
+            img_index = "%04d" % self.still_image_index
         vid_index = "%04d" % self.video_file_index
         tl_index = "%04d" % self.timelapse_index
 
@@ -1173,12 +1176,11 @@ class CameraCoreModel:
             self.still_image_index += 1
         elif (filetype == "t"):
             count = self.timelapse_index
-            self.timelapse_index += 1
         elif filetype == "v":
             count = self.video_file_index
             self.video_file_index += 1
         # Make actual thumbnail.
-        thumbnail_path = filepath + "." + filetype + str(count) + ".th.jpg"
+        thumbnail_path = filepath + "." + filetype + f"{count:04}.th.jpg"
         shutil.copyfile(self.config["preview_path"], thumbnail_path)
 
     def reset_user_configs(self):

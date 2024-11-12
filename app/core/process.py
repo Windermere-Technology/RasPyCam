@@ -536,15 +536,19 @@ def execute_command(index, cams, threads, cmd_tuple):
                 print("Invalid values for settings")
         elif cmd_code == "tl":  # Start or stop the gathering of timelapse images.
             if int(cmd_param) == 1:
-                timelapse_on = True
-                timelapse_count = 1
+                model.timelapse_on = True
+                model.make_filecounts()
+                model.timelapse_count = 1
                 update_status_file(cams[CameraCoreModel.main_camera])
-                print("Timelapse started");
+                model.print_to_logfile("Timelapse started")
+                print("Timelapse started")
             elif int(cmd_param) == 0:
-                timelapse_on = False
+                model.timelapse_on = False
                 update_status_file(cams[CameraCoreModel.main_camera])
-                print("Timelapse stopped");
-            else
+                model.print_to_logfile("Timelapse stopped")
+                print("Timelapse stopped")
+            else:
+                model.print_to_logfile(f"ERROR: bad argument to tl: {cmd_param}")
                 print(f"ERROR: Invalid 'tl' argument: {cmd_param}")
         elif cmd_code == "tv": # set timelapse interval
             print(
@@ -723,8 +727,11 @@ def start_background_process(config_filepath):
         start_preview_md_threads(threads)
 
     # Initialize the timelapse timer that periodically triggers the image capture.
-    tl_interval_ms = int(model.config["tl_interval"]) * 100
-    timelapse_timer = tl_interval_ms
+    # Note: This assumes each command loop runs for .01 seconds, which is really the minimum time it will run.
+    # It would be better to implement an algorithm here that reads the realtime clock to detect when
+    # the tl_interval has elapsed to trigger the image capture.
+    tl_interval_loops = cams[CameraCoreModel.main_camera].config["tl_interval"] * 10
+    timelapse_timer = tl_interval_loops
 
     # Execute commands off the queue as they come in.
     while CameraCoreModel.process_running:
@@ -750,14 +757,13 @@ def start_background_process(config_filepath):
                     toggle_cam_record(cam, False)
                     cam.record_until = None
                     print("Video recording duration complete.")
-       # Capture timelapse images
-       if timelapse_on:
-           timelapse_timer += 1
-           if (timelapse_timer > tl_interval_ms):
-               capture_still_image(model)
-               timelapse_timer = 0
-
-      time.sleep(0.01)  # Small delay before next iteration
+        # Capture timelapse images
+        if cams[CameraCoreModel.main_camera].timelapse_on:
+            timelapse_timer += 1
+            if (timelapse_timer > tl_interval_loops):
+                capture_still_image(cams[CameraCoreModel.main_camera])
+                timelapse_timer = 0
+        time.sleep(0.01)  # Small delay before next iteration
 
     print("Shutting down gracefully...")
     for cam_index in cams:

@@ -8,16 +8,16 @@ def capture_still_image(cam):
 
     # Capture metadata (optional, you can remove if not used)
     metadata = cam.capture_metadata() if hasattr(cam, "capture_metadata") else {}
-    
+
     # Generate the output file name
-    if (timelapse_on)
+    if cam.timelapse_on:
         image_path = cam.make_filename(
             cam.config["lapse_output_path"]
-        )  # Generate output file name
-    else
+        )  # Generate output file name for the timelapse image
+    else:
         image_path = cam.make_filename(
             cam.config["image_output_path"]
-        )  # Generate output file name
+        )  # Generate output file name for the image
 
     # Capture the image as an array (this captures in BGR format)
     img = cam.picam2.capture_array("main")
@@ -27,12 +27,12 @@ def capture_still_image(cam):
 
     cam.picam2.helpers.save(img_rgb, metadata, image_path)
 
-    if (timelapse_on):
-        if (timelapse_counter == 1):
+    if cam.timelapse_on:
+        if (cam.timelapse_count == 1):
             # Save a thumbnail for this image.
             cam.generate_thumbnail("t", image_path)
-            print(f"INFO: Captured first timelapse image {image_path}")
-    else
+        cam.timelapse_count += 1
+    else:
         # Save a thumbnail for this image.
         cam.generate_thumbnail("i", image_path)
 
