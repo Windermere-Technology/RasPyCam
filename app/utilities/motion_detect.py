@@ -86,7 +86,7 @@ def motion_detection_thread(cams):
                 mse = np.square(np.subtract(cur, prev)).mean()
                 if mse > cam.config["motion_threshold"]:
                     cam.motion_still_count = 0
-                    print("motion detect: ", mse)
+                    print("motion detect: ", mse, ", motion_threshold=", cam.config["motion_threshold"])
                     if not cam.detected_motion:
                         cam.motion_active_count += 1
                         if cam.motion_active_count >= cam.config["motion_startframes"]:

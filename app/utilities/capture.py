@@ -10,9 +10,14 @@ def capture_still_image(cam):
     metadata = cam.capture_metadata() if hasattr(cam, "capture_metadata") else {}
 
     # Generate the output file name
-    image_path = cam.make_filename(
-        cam.config["image_output_path"]
-    )  # Generate output file name
+    if cam.timelapse_on:
+        image_path = cam.make_filename(
+            cam.config["lapse_output_path"]
+        )  # Generate output file name for the timelapse image
+    else:
+        image_path = cam.make_filename(
+            cam.config["image_output_path"]
+        )  # Generate output file name for the image
 
     # Capture the image as an array (this captures in BGR format)
     img = cam.picam2.capture_array("main")
@@ -22,8 +27,14 @@ def capture_still_image(cam):
 
     cam.picam2.helpers.save(img_rgb, metadata, image_path)
 
-    # Save a thumbnail for this image.
-    cam.generate_thumbnail("i", image_path)
+    if cam.timelapse_on:
+        if (cam.timelapse_count == 1):
+            # Save a thumbnail for this image.
+            cam.generate_thumbnail("t", image_path)
+        cam.timelapse_count += 1
+    else:
+        # Save a thumbnail for this image.
+        cam.generate_thumbnail("i", image_path)
 
 
 def capture_stitched_image(index, cams, axis):
