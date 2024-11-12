@@ -1,5 +1,6 @@
 import os
 import re
+import subprocess
 import time
 import threading
 import signal
@@ -525,6 +526,14 @@ def execute_command(index, cams, threads, cmd_tuple):
                 success = True
             except ValueError:
                 print("Invalid values for settings")
+        elif cmd_code == "sy":
+            parts = cmd_param.split(" ")
+            script_name = parts[0]
+            args = parts[1:] if len(parts) > 1 else []
+            success = execute_macro_command(script_name, args)
+            if success:
+                print(f"Successfully executed macro: {script_name} with args: {args}")
+            return
         elif cmd_code in requires_full_restart:
             print(f"Altering camera {num} configuration")
             # These need the encoder to be fully stopped to work.
@@ -726,3 +735,35 @@ def start_background_process(config_filepath):
         cam.teardown()  # Teardown the camera and stop it
         update_status_file(cam)  # Update the status file with halted status
     os.close(CameraCoreModel.fifo_fd)  # Close the FIFO pipe
+
+def execute_macro_command(script_name, args):
+    """
+    Executes a macro script located in /var/www/html/macros/ with specified arguments.
+    
+    Args:
+        script_name (str): The name of the macro script file (e.g., "somemacro.sh").
+        args (list): List of arguments to pass to the script.
+    """
+    # Define the base directory for macros and construct the full script path
+    macros_dir = "/var/www/html/macros"
+    script_path = os.path.join(macros_dir, script_name)
+
+    # Check if the script exists and is executable
+    if not os.path.isfile(script_path):
+        print(f"ERROR: Script {script_path} does not exist.")
+        return False
+    if not os.access(script_path, os.X_OK):
+        print(f"ERROR: Script {script_path} is not executable.")
+        return False
+
+    # Construct the command with 'www-data' user context
+    command = ["sudo", "-u", "www-data", script_path] + args
+
+    try:
+        # Execute the script with the provided arguments
+        result = subprocess.run(command, check=True, capture_output=True, text=True)
+        print(f"Script output:\n{result.stdout}")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"ERROR: Failed to execute script {script_name}. Error:\n{e.stderr}")
+        return False
