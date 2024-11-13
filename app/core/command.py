@@ -165,7 +165,7 @@ def execute_command(index, cams, threads, cmd_tuple):
     cmd_code, cmd_param = cmd_tuple
     if not cmd_code:
         return
-    
+
     requires_full_restart = {"px", "rs", "cs", "cr", "1s", "ix", "ix+ix"}
     requires_quick_restart = {"fl"}
     model = cams[index]
@@ -206,7 +206,8 @@ def execute_command(index, cams, threads, cmd_tuple):
         case "md":  # Motion detection toggle
             model.motion_detection = cmd_param != "0"
             model.print_to_logfile(
-                "Internal motion detection " + ("started" if model.motion_detection else "stopped")
+                "Internal motion detection "
+                + ("started" if model.motion_detection else "stopped")
             )
         case "mx":  # Change motion detection mode
             model.config["motion_mode"] = "internal" if cmd_param == "0" else "monitor"
@@ -250,7 +251,10 @@ def execute_command(index, cams, threads, cmd_tuple):
                 model.config.update(
                     preview_quality=max(1, min(100, quality)),
                     divider=divider,
-                    preview_size=(width, height[0] if height else int((width / 16) * 9)),
+                    preview_size=(
+                        width,
+                        height[0] if height else int((width / 16) * 9),
+                    ),
                 )
                 success = True
             except ValueError:
@@ -264,7 +268,9 @@ def execute_command(index, cams, threads, cmd_tuple):
             model.timelapse_on = cmd_param == "1"
             model.make_filecounts()
             update_status_file(cams[CameraCoreModel.main_camera])
-            model.print_to_logfile("Timelapse " + ("started" if model.timelapse_on else "stopped"))
+            model.print_to_logfile(
+                "Timelapse " + ("started" if model.timelapse_on else "stopped")
+            )
         case "tv":  # Set timelapse interval
             try:
                 new_tl_interval = int(cmd_param)
@@ -272,7 +278,9 @@ def execute_command(index, cams, threads, cmd_tuple):
                     model.config["tl_interval"] = new_tl_interval
                     success = True
                 else:
-                    print("ERROR: timelapse interval must be between 1 and (24*60*60*10).")
+                    print(
+                        "ERROR: timelapse interval must be between 1 and (24*60*60*10)."
+                    )
             except ValueError:
                 print("ERROR: tv Value is not an integer")
         case cmd if cmd in requires_full_restart:
@@ -293,7 +301,9 @@ def execute_command(index, cams, threads, cmd_tuple):
             print("Invalid command execution attempt.")
             model.print_to_logfile("Unrecognised pipe command")
 
-    CameraCoreModel.debug_execution_time = time.monotonic() - CameraCoreModel.debug_execution_time
+    CameraCoreModel.debug_execution_time = (
+        time.monotonic() - CameraCoreModel.debug_execution_time
+    )
     model.print_to_logfile(
         f"Attempted to execute '{cmd_code}' with parameters ({cmd_param}). "
         + f"Attempt took {CameraCoreModel.debug_execution_time} seconds."

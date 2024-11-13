@@ -4,7 +4,11 @@ import threading
 import time
 from picamera2 import Picamera2
 from core.model import CameraCoreModel
-from core.command import execute_all_commands, parse_incoming_commands, start_preview_md_threads
+from core.command import (
+    execute_all_commands,
+    parse_incoming_commands,
+    start_preview_md_threads,
+)
 from core.control import set_previews, show_preview
 from utilities.record import toggle_cam_record
 from utilities.capture import capture_still_image
