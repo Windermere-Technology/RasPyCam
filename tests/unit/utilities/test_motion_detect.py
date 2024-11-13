@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch, mock_open, MagicMock
 import os
 from datetime import datetime
-from utilities.motion_detect import (  # type: ignore
+from utilities.motion import (  # type: ignore
     setup_motion_pipe,
     print_to_motion_log,
     send_motion_command,
@@ -55,7 +55,7 @@ class TestMotionDetect(unittest.TestCase):
         mock_mkfifo.assert_not_called()
 
     @patch("builtins.open", new_callable=mock_open)
-    @patch("utilities.motion_detect.datetime")
+    @patch("utilities.motion.datetime")
     def test_print_to_motion_log(self, mock_datetime, mock_open):
         mock_datetime.now.return_value = datetime(2023, 1, 1, 12, 0, 0)
         print_to_motion_log("/fake/path/to/log", "Test message")

@@ -10,7 +10,7 @@ from core.model import CameraCoreModel
 from utilities.preview import generate_preview
 from utilities.record import toggle_cam_record
 from utilities.capture import capture_still_image, capture_stitched_image
-from utilities.motion_detect import motion_detection_thread, setup_motion_pipe
+from app.utilities.motion import motion_detection_thread, setup_motion_pipe
 
 
 def on_sigint_sigterm(sig, frame):

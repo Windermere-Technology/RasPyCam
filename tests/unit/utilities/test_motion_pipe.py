@@ -1,6 +1,6 @@
 import os
 from unittest.mock import patch
-from utilities.motion_detect import setup_motion_pipe, send_motion_command  # type: ignore
+from utilities.motion import setup_motion_pipe, send_motion_command  # type: ignore
 
 
 @patch("os.mkfifo")
