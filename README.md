@@ -18,7 +18,6 @@
 - [Contributing](#contributing)
   - [Issues](#issues)
   - [Code Changes](#code-changes)
-  - [Testing Changes](#testing-changes)
 - [Acknowledgements](#acknowledgements)
 
 <h1>Overview</h1>
@@ -246,21 +245,6 @@ To make changes to the code, you can follow the steps below:
 2. Make your changes, commit and push them to your forked repository
 3. Create a pull request back to the main repository ([Windermere-Technology/RasPyCam](https://github.com/windermere-technology/raspycam))
 4. Wait for the pull request to be reviewed and merged
-
-<h2>Testing Changes</h2>
-
-To test your changes and generage a coverage report, you can run the following commands on a Raspberry Pi with a camera module connected to it:
-
-```bash
-sudo apt update
-sudo apt install libcap-dev python3-pytest libopencv-dev python3-pytest-cov -y
-```
-
-```bash
-PYTHONPATH=./app pytest --import-mode=importlib --cov=app --cov-report=term --cov-report=html:coverage_html --cov-config=tests/.coveragerc
-```
-
-This command will run the testing suite and generate a coverage report. You can view this report by opening the `coverage_html/index.html` file in your browser. If you want to test a specific folder or file, just add the path to the end of the command.
 
 <h1>Acknowledgements</h1>
 

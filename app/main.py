@@ -1,5 +1,6 @@
 import argparse
-from core.process import start_background_process
+
+from core.initialisation import start_background_process
 
 
 def parse_args():

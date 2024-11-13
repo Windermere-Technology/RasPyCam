@@ -1,5 +1,19 @@
 #!/usr/bin/env bash
 
+REQUIRED_PYTHON_VERSION="3.10"
+PYTHON_VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:3])))')
+
+if [[ $(printf '%s\n' "$REQUIRED_PYTHON_VERSION" "$PYTHON_VERSION" | sort -V | head -n1) != "$REQUIRED_PYTHON_VERSION" ]]; then
+    echo "Python $REQUIRED_PYTHON_VERSION or above is required for this script."
+    echo "Your current Python version is $PYTHON_VERSION."
+    echo "Please update Python by following these steps:"
+    echo "1. Update the package list: sudo apt update"
+    echo "2. Install the latest Python version: sudo apt install python3"
+    echo "3. Verify the version: python3 --version"
+    echo "Exiting installation. Please re-run the script after updating Python."
+    exit 1
+fi
+
 fn_install_rpi_web()
 {   
     echo "RPI-Cam-Web-Interface installation"
