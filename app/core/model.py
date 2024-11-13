@@ -64,6 +64,7 @@ class CameraCoreModel:
         "ag": ["autowbgain_r", "autowbgain_b"],
         "tl": "timelapse_start_stop",
         "tv": "tl_interval",
+        "sy": ["macro_script", "args"]
     }
 
     debug_execution_time = None

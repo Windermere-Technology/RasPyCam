@@ -539,6 +539,7 @@ def execute_command(index, cams, threads, cmd_tuple):
             parts = cmd_param.split(" ")
             script_name = parts[0]
             args = parts[1:] if len(parts) > 1 else []
+            model.print_to_logfile(f"Execute macro: '{script_name} {args}'")
             success = execute_macro_command(model, script_name, args)
             if success:
                 print(f"Successfully executed macro: {script_name} with args: {args}")
