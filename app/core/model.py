@@ -140,7 +140,7 @@ class CameraCoreModel:
             "motion_logfile": "/tmp/motionLog.txt",  # Log file recording motion events during Monitor mode.
             "picam_buffer_count": 2,
             "solo_stream_mode": False,
-            "tl_interval": 300, # timelapse interval in .1 second units
+            "tl_interval": 300,  # timelapse interval in .1 second units
         }
 
         self.write_to_config = (
@@ -174,7 +174,7 @@ class CameraCoreModel:
         self.motion_detection = False  # Flag for motion detection mode status
 
         self.timelapse_on = False  # Flag for timelapse mode
-        self.timelapse_count = 0 # Clear timelapse sequence number
+        self.timelapse_count = 0  # Clear timelapse sequence number
         self.detected_motion = False  # Flag for whether motion has been detected by MD.
         self.motion_still_count = (
             0  # Counter for number of consecutive frames with no motion.
@@ -616,7 +616,7 @@ class CameraCoreModel:
 
     def setup_video_encoder(self):
         """
-	Setup the encoder used for recording video (H264).
+        Setup the encoder used for recording video (H264).
         """
         self.video_encoder = H264Encoder(
             bitrate=self.config["video_bitrate"], framerate=self.config["mp4_fps"]
@@ -894,9 +894,7 @@ class CameraCoreModel:
 
         # timelapse settings
         if "tl_interval" in parsed_configs:
-            self.config["tl_interval"] = (
-                int(parsed_configs["tl_interval"])
-            )
+            self.config["tl_interval"] = int(parsed_configs["tl_interval"])
 
     def read_user_config(self):
         """Loads the settings for the user config file into the write_to_configs dict
@@ -1171,10 +1169,10 @@ class CameraCoreModel:
             )
             cv2.imwrite(self.config["preview_path"], blank_thumbnail)
         count = None
-        if (filetype == "i"):
+        if filetype == "i":
             count = self.still_image_index
             self.still_image_index += 1
-        elif (filetype == "t"):
+        elif filetype == "t":
             count = self.timelapse_index
         elif filetype == "v":
             count = self.video_file_index

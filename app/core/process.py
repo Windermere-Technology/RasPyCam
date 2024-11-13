@@ -1,5 +1,6 @@
 import os
 import re
+import subprocess
 import time
 import threading
 import signal
@@ -534,6 +535,14 @@ def execute_command(index, cams, threads, cmd_tuple):
                 success = True
             except ValueError:
                 print("Invalid values for settings")
+        elif cmd_code == "sy":
+            parts = cmd_param.split(" ")
+            script_name = parts[0]
+            args = parts[1:] if len(parts) > 1 else []
+            success = execute_macro_command(model, script_name, args)
+            if success:
+                print(f"Successfully executed macro: {script_name} with args: {args}")
+            return
         elif cmd_code == "tl":  # Start or stop the gathering of timelapse images.
             if int(cmd_param) == 1:
                 model.timelapse_on = True
@@ -550,15 +559,15 @@ def execute_command(index, cams, threads, cmd_tuple):
             else:
                 model.print_to_logfile(f"ERROR: bad argument to tl: {cmd_param}")
                 print(f"ERROR: Invalid 'tl' argument: {cmd_param}")
-        elif cmd_code == "tv": # set timelapse interval
-            print(
-                "Setting timelapse interval"
-            )  # 'tv' stands for "timelapse interval"
+        elif cmd_code == "tv":  # set timelapse interval
+            print("Setting timelapse interval")  # 'tv' stands for "timelapse interval"
             new_tl_interval = model.config["tl_interval"]
             try:
                 new_tl_interval = int(cmd_param)
-                if (new_tl_interval < 1) or (new_tl_interval > (24*60*60*10)):
-                    print("ERROR: timelapse interval must be between 1 and (24*60*60*10).")
+                if (new_tl_interval < 1) or (new_tl_interval > (24 * 60 * 60 * 10)):
+                    print(
+                        "ERROR: timelapse interval must be between 1 and (24*60*60*10)."
+                    )
                 else:
                     model.config["tl_interval"] = new_tl_interval
                     success = True
@@ -760,7 +769,7 @@ def start_background_process(config_filepath):
         # Capture timelapse images
         if cams[CameraCoreModel.main_camera].timelapse_on:
             timelapse_timer += 1
-            if (timelapse_timer > tl_interval_loops):
+            if timelapse_timer > tl_interval_loops:
                 capture_still_image(cams[CameraCoreModel.main_camera])
                 timelapse_timer = 0
         time.sleep(0.01)  # Small delay before next iteration
@@ -778,3 +787,34 @@ def start_background_process(config_filepath):
         cam.teardown()  # Teardown the camera and stop it
         update_status_file(cam)  # Update the status file with halted status
     os.close(CameraCoreModel.fifo_fd)  # Close the FIFO pipe
+
+
+def execute_macro_command(model, script_name, args):
+    """
+    Executes a macro script from the directory specified in the model's configuration.
+
+    Args:
+        model (CameraCoreModel): The camera model instance containing configuration details.
+        script_name (str): The name of the macro script file (e.g., "somemacro.sh").
+        args (list): List of arguments to pass to the script.
+    """
+    macros_dir = model.config.get("macros_path", "/var/www/html/macros")
+    script_path = os.path.join(macros_dir, script_name)
+
+    # Check if the script exists and is executable
+    if not os.path.isfile(script_path):
+        print(f"ERROR: Script {script_path} does not exist.")
+        return False
+    if not os.access(script_path, os.X_OK):
+        print(f"ERROR: Script {script_path} is not executable.")
+        return False
+
+    command = [script_path] + args
+
+    try:
+        result = subprocess.run(command, check=True, capture_output=True, text=True)
+        print(f"Script output:\n{result.stdout}")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"ERROR: Failed to execute script {script_name}. Error:\n{e.stderr}")
+        return False

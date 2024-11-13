@@ -178,6 +178,7 @@ Currently the program supports the following commands:
 | `cr` | {width height} | Changes the camera sensor resolution. Will restart cameras. |
 | `cs` | i/v/i+v {width height} {width height} | Changes image (i), video (v), or both (i+v) stream sizes. Specifying the second set of width and height only needs to be done when using i+v. Will restart cameras. |
 | `1s` | 0/1/2 | Switches to solo stream mode (1), optionally sets to the maximum sensor resolution if (2) is provided or switches off solo stream mode (0). Will restart cameras. |
+| `sy` | {script} <args> | Executes a user-defined macro script located in /var/www/html/macros/. {script} is the script file name (e.g., mktimelapse.sh). | 
 
 If the program is initated without a specified configuration file, the program will utilise the following paths for inputs and outputs:
 | Type | Path |
