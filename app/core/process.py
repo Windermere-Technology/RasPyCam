@@ -736,11 +736,10 @@ def start_background_process(config_filepath):
         start_preview_md_threads(threads)
 
     # Initialize the timelapse timer that periodically triggers the image capture.
-    # Note: This assumes each command loop runs for .01 seconds, which is really the minimum time it will run.
-    # It would be better to implement an algorithm here that reads the realtime clock to detect when
-    # the tl_interval has elapsed to trigger the image capture.
-    tl_interval_loops = cams[CameraCoreModel.main_camera].config["tl_interval"] * 10
-    timelapse_timer = tl_interval_loops
+    # Control the timelapse interval from the system time.
+    # Get the time interval in seconds (ignore the tenths)
+    time_interval = cams[CameraCoreModel.main_camera].config["tl_interval"] / 10
+    next_time = time.time() + time_interval
 
     # Execute commands off the queue as they come in.
     while CameraCoreModel.process_running:
@@ -768,10 +767,9 @@ def start_background_process(config_filepath):
                     print("Video recording duration complete.")
         # Capture timelapse images
         if cams[CameraCoreModel.main_camera].timelapse_on:
-            timelapse_timer += 1
-            if timelapse_timer > tl_interval_loops:
+            if time.time() >= next_time:
+                next_time = time.time() + time_interval
                 capture_still_image(cams[CameraCoreModel.main_camera])
-                timelapse_timer = 0
         time.sleep(0.01)  # Small delay before next iteration
 
     print("Shutting down gracefully...")
