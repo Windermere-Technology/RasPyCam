@@ -11,15 +11,21 @@ def capture_still_image(cam):
 
     # Generate the output file name
     if cam.timelapse_on:
+        cam.print_to_logfile("Capturing timelapse image")
         image_path = cam.make_filename(
             cam.config["lapse_output_path"]
         )  # Generate output file name for the timelapse image
     else:
+        cam.print_to_logfile("Capturing image")
         image_path = cam.make_filename(
             cam.config["image_output_path"]
         )  # Generate output file name for the image
 
-    # Capture the image as an array (this captures in BGR format)
+    # Update the status for the frontend to use for UI feedback
+    cam.capturing_still = True
+    cam.update_status_file()
+
+     # Capture the image as an array (this captures in BGR format)
     img = cam.picam2.capture_array("main")
 
     # Convert BGR to RGB and save the image using PIL
@@ -36,12 +42,20 @@ def capture_still_image(cam):
         # Save a thumbnail for this image.
         cam.generate_thumbnail("i", image_path)
 
+    # Update the status for the frontend to use for UI feedback
+    cam.capturing_still = False
+    cam.update_status_file()
+
 
 def capture_stitched_image(index, cams, axis):
     """
     Takes images with multiple cameras and stitches them together.
     """
     print("Taking stitched still image with cameras")
+
+    # Update the status for the frontend to use for UI feedback
+    cams[index].capturing_still = True
+    cams[index].update_status_file()
 
     # Capture the current frame and metadata
     metadata = cams[index].picam2.capture_metadata()
@@ -98,3 +112,7 @@ def capture_stitched_image(index, cams, axis):
 
     # Save a thumbnail for this image.
     cams[index].generate_thumbnail("i", image_path)
+
+    # Update the status for the frontend to use for UI feedback
+    cams[index].capturing_still = False
+    cams[index].update_status_file()

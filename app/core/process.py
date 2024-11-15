@@ -32,35 +32,9 @@ signal.signal(signal.SIGINT, on_sigint_sigterm)
 signal.signal(signal.SIGTERM, on_sigint_sigterm)
 
 
-def update_status_file(model):
-    """
-    Updates the status file with the current camera status.
-
-    Args:
-        model: CameraCoreModel instance containing the status and config.
-    """
-    model.set_status()
-    current_status = model.current_status  # Get the current status from the model
-    status_filepath = model.config["status_file"]  # Path to the status file
-    status_dir = os.path.dirname(
-        status_filepath
-    )  # Get the directory of the status file
-
-    # Create the status directory if it doesn't exist
-    if not os.path.exists(status_dir):
-        os.makedirs(status_dir)
-
-    # Write the current status to the status file
-    if current_status:
-        status_file = open(status_filepath, "w")
-        status_file.write(current_status)
-        status_file.close()
-
-
 def write_to_user_config(cam, cmd_code, cmd_param):
     """
     Write changes made to a camera's configuration into their associated user_config file.
-
     Args:
         cam: CameraCoreModel instance.
         cmd_code : Command to check against valid commands dict.
@@ -107,7 +81,6 @@ def write_to_user_config(cam, cmd_code, cmd_param):
             for key, value in cam.write_to_config.items():
                 line = key + " " + value + "\n"
                 uconfig.write(line)
-
 
 def setup_fifo(path):
     """
@@ -316,7 +289,7 @@ def execute_all_commands(cams, threads, cmd_tuple):
         # Single command. Execute on main camera.
         execute_command(CameraCoreModel.main_camera, cams, threads, cmd_tuple)
     # Update status files after command execution
-    update_status_file(cams[CameraCoreModel.main_camera])
+    cams[CameraCoreModel.main_camera].update_status_file()
 
 
 def execute_command(index, cams, threads, cmd_tuple):
@@ -539,6 +512,7 @@ def execute_command(index, cams, threads, cmd_tuple):
             parts = cmd_param.split(" ")
             script_name = parts[0]
             args = parts[1:] if len(parts) > 1 else []
+            model.print_to_logfile(f"Execute macro: '{script_name} {args}'")
             success = execute_macro_command(model, script_name, args)
             if success:
                 print(f"Successfully executed macro: {script_name} with args: {args}")
@@ -548,12 +522,12 @@ def execute_command(index, cams, threads, cmd_tuple):
                 model.timelapse_on = True
                 model.make_filecounts()
                 model.timelapse_count = 1
-                update_status_file(cams[CameraCoreModel.main_camera])
+                model.update_status_file()
                 model.print_to_logfile("Timelapse started")
                 print("Timelapse started")
             elif int(cmd_param) == 0:
                 model.timelapse_on = False
-                update_status_file(cams[CameraCoreModel.main_camera])
+                model.update_status_file()
                 model.print_to_logfile("Timelapse stopped")
                 print("Timelapse stopped")
             else:
@@ -719,7 +693,7 @@ def start_background_process(config_filepath):
     CameraCoreModel.process_running = True
 
     # Write status to the status file.
-    update_status_file(cams[CameraCoreModel.main_camera])
+    cams[CameraCoreModel.main_camera].update_status_file()
 
     # Start a thread to continuously parse incoming commands
     cmd_processing_thread = threading.Thread(target=parse_incoming_commands)
@@ -736,11 +710,11 @@ def start_background_process(config_filepath):
         start_preview_md_threads(threads)
 
     # Initialize the timelapse timer that periodically triggers the image capture.
-    # Note: This assumes each command loop runs for .01 seconds, which is really the minimum time it will run.
-    # It would be better to implement an algorithm here that reads the realtime clock to detect when
-    # the tl_interval has elapsed to trigger the image capture.
-    tl_interval_loops = cams[CameraCoreModel.main_camera].config["tl_interval"] * 10
-    timelapse_timer = tl_interval_loops
+
+    # Control the timelapse interval from the system time.
+    # Get the time interval in seconds (ignore the tenths)
+    time_interval = cams[CameraCoreModel.main_camera].config["tl_interval"] / 10
+    next_time = time.time() + time_interval
 
     # Execute commands off the queue as they come in.
     while CameraCoreModel.process_running:
@@ -768,10 +742,9 @@ def start_background_process(config_filepath):
                     print("Video recording duration complete.")
         # Capture timelapse images
         if cams[CameraCoreModel.main_camera].timelapse_on:
-            timelapse_timer += 1
-            if timelapse_timer > tl_interval_loops:
+            if time.time() >= next_time:
+                next_time = time.time() + time_interval
                 capture_still_image(cams[CameraCoreModel.main_camera])
-                timelapse_timer = 0
         time.sleep(0.01)  # Small delay before next iteration
 
     print("Shutting down gracefully...")
@@ -785,7 +758,7 @@ def start_background_process(config_filepath):
     for cam_index in cams:
         cam = cams[cam_index]
         cam.teardown()  # Teardown the camera and stop it
-        update_status_file(cam)  # Update the status file with halted status
+        cam.update_status_file()  # Update the status file with halted status
     os.close(CameraCoreModel.fifo_fd)  # Close the FIFO pipe
 
 
