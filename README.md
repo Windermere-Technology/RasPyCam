@@ -161,7 +161,7 @@ Currently the program supports the following commands:
 | `sa` | {value} | Sets the saturation of the camera. |
 | `wb` | {value} | Sets the white balance mode of the camera. |
 | `ag` | {value} | Sets the analog (colour) gain of the camera. |
-| `ss` | {value} | Sets the shutter speed (exposure time) of the camera. |
+| `ss` | {value} | Sets the shutter speed (exposure time in µs) of the camera. |
 | `an` | {value} | Sets the annotation text on the camera feed. See [Filename Creation](#filename-creation) for more details |
 | `ec` | {value} | Sets exposure compensation. |
 | `is` | {value} | Sets the ISO level. |
