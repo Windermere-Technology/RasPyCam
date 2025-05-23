@@ -245,6 +245,8 @@ if [[ "$phpversion" == "7.4" ]]; then
    sed -i "s/\/var\/run\/php5-fpm\.sock;/\/run\/php\/php7.4-fpm\.sock;/g" $aconf
 elif [[ "$phpversion" == "7.3" ]]; then
    sed -i "s/\/var\/run\/php5-fpm\.sock;/\/run\/php\/php7.3-fpm\.sock;/g" $aconf
+elif [[ "$phpversion" == "8.2" ]]; then
+   sed -i "s/\/var\/run\/php5-fpm\.sock;/\/run\/php\/php8.2-fpm\.sock;/g" $aconf
 fi
 sudo sed -i -E "s/(listen.+?)80/\1$webport/g" $aconf
 # following line sets root url to direct subfolder. This is inconsistent with other usage.
