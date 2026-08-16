@@ -159,8 +159,10 @@ fi
 
 fn_stop ()
 { # This is function stop
+        # Stop via systemd first: SIGKILL counts as failure and Restart=on-failure can revive the camera mid-install.
+        sudo systemctl stop raspimjpeg-schedule.service 2>/dev/null || true
+        sudo systemctl stop raspimjpeg.service 2>/dev/null || true
         sudo kill -9 $(cat /opt/vc/bin/raspycam/raspy.pid) 2>/dev/null
-        sudo killall php 2>/dev/null
         sudo killall motion 2>/dev/null
 }
 
@@ -317,38 +319,61 @@ sudo chmod 664 /etc/motion/motion.conf
 
 fn_autostart ()
 {
-tmpfile=$(mktemp)
-sudo sed '/#START/,/#END/d' /etc/rc.local > "$tmpfile" && sudo mv "$tmpfile" /etc/rc.local
-# Remove to growing plank lines.
-sudo awk '!NF {if (++n <= 1) print; next}; {n=0;print}' /etc/rc.local > "$tmpfile" && sudo mv "$tmpfile" /etc/rc.local
-if [ "$autostart" == "yes" ]; then
-   if ! grep -Fq '#START RASPIMJPEG SECTION' /etc/rc.local; then
-      sudo sed -i '/exit 0/d' /etc/rc.local
-      sudo bash -c "cat >> /etc/rc.local" << EOF
-#START RASPIMJPEG SECTION
-mkdir -p /dev/shm/mjpeg
-chown www-data:www-data /dev/shm/mjpeg
-chmod 777 /dev/shm/mjpeg
-sleep 4;su -c 'raspimjpeg > /dev/null 2>&1 &' www-data
-if [ -e /etc/debian_version ]; then
-  sleep 4;su -c 'php /var/www$rpicamdir/schedule.php > /dev/null 2>&1 &' www-data
-else
-  sleep 4;su -s '/bin/bash' -c 'php /var/www$rpicamdir/schedule.php > /dev/null 2>&1 &' www-data
+# Clean up old-release upgrades, or rc.local and systemd will start duplicate instances.
+if [ -e /etc/rc.local ]; then
+   tmpfile=$(mktemp)
+   sudo sed '/#START RASPIMJPEG SECTION/,/#END RASPIMJPEG SECTION/d' /etc/rc.local > "$tmpfile" && sudo mv "$tmpfile" /etc/rc.local
+   # Remove growing blank lines.
+   sudo awk '!NF {if (++n <= 1) print; next}; {n=0;print}' /etc/rc.local > "$tmpfile" && sudo mv "$tmpfile" /etc/rc.local
+   sudo chown root:root /etc/rc.local
+   sudo chmod 755 /etc/rc.local
 fi
-#END RASPIMJPEG SECTION
 
-exit 0
+sudo bash -c "cat > /etc/systemd/system/raspimjpeg.service" << EOF
+[Unit]
+Description=RPi Cam Web Interface camera backend
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+# /dev/shm is per-boot tmpfs; '+' runs this as root so chown works despite User=www-data.
+ExecStartPre=+/usr/bin/install -d -m 0777 -o www-data -g www-data /dev/shm/mjpeg
+# Run Python directly: /usr/bin/raspimjpeg backgrounds and exits, so Type=simple kills its cgroup (1.269 s measured).
+# Type=forking plus its PIDFile also fails: it writes after a sleep, so later stop/start reads a stale PID.
+ExecStart=/usr/bin/python3 /opt/vc/bin/raspycam/main.py --config /etc/raspimjpeg
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
 EOF
-   else
-      tmpfile=$(mktemp)
-      sudo sed '/#START/,/#END/d' /etc/rc.local > "$tmpfile" && sudo mv "$tmpfile" /etc/rc.local
-      # Remove to growing plank lines.
-      sudo awk '!NF {if (++n <= 1) print; next}; {n=0;print}' /etc/rc.local > "$tmpfile" && sudo mv "$tmpfile" /etc/rc.local
-   fi
 
+sudo bash -c "cat > /etc/systemd/system/raspimjpeg-schedule.service" << EOF
+[Unit]
+Description=RPi Cam Web Interface scheduler
+After=raspimjpeg.service
+BindsTo=raspimjpeg.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+ExecStart=/usr/bin/php /var/www$rpicamdir/schedule.php
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+if [ "$autostart" == "yes" ]; then
+   sudo systemctl enable raspimjpeg.service raspimjpeg-schedule.service
+else
+   sudo systemctl disable raspimjpeg.service raspimjpeg-schedule.service >/dev/null 2>&1 || true
 fi
-sudo chown root:root /etc/rc.local
-sudo chmod 755 /etc/rc.local
 }
 
 #Main install)
