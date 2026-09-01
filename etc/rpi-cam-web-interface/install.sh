@@ -54,6 +54,7 @@ elif [ $VERSION -eq 11 ]; then
 #   sudo grep -qxF 'start_x=1' /boot/config.txt || sudo sed -i '$ a start_x=1' /boot/config.txt
 #   sudo grep -qxF 'gpu_mem=128' /boot/config.txt || sudo sed -i '$ a gpu_mem=128' /boot/config.txt
    sudo mkdir -p /opt/vc/bin
+# bookworm
 elif [ $VERSION -eq 12 ]; then
    phpversion=8.2
 #following is done by enable legacy camera in updates raspi-config
@@ -61,7 +62,12 @@ elif [ $VERSION -eq 12 ]; then
 #   sudo grep -qxF 'start_x=1' /boot/config.txt || sudo sed -i '$ a start_x=1' /boot/config.txt
 #   sudo grep -qxF 'gpu_mem=128' /boot/config.txt || sudo sed -i '$ a gpu_mem=128' /boot/config.txt
    sudo mkdir -p /opt/vc/bin
+# trixie
+elif [ $VERSION -ge 13 ]; then
+   phpversion=8.4
+   sudo mkdir -p /opt/vc/bin
 else
+   echo "Unsupported Debian VERSION=$VERSION"
    phpversion=7.0
 fi
 

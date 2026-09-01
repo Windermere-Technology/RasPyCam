@@ -328,7 +328,10 @@ def execute_command(index, cams, threads, cmd_tuple):
             start_preview_md_threads(threads)
     elif model.current_status != "halted":
         if cmd_code == "im":  # 'im' stands for "image capture"
+            tl_on = model.timelapse_on
+            model.timelapse_on = False
             capture_still_image(model)
+            model.timelapse_on = tl_on
         elif (
             cmd_code == "im+im"
         ):  # NEW COMMAND - Captures stitched image from all cameras.

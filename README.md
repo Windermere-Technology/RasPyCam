@@ -55,7 +55,7 @@ pip install picamera2 opencv-python Pillow
 1. Clone the repository to your Raspberry Pi:
 
 ```bash
-git clone https://github.com/windermere-technology/raspycam.git
+git clone https://github.com/hogwell/RasPyCam.git
 ```
 
 2. Run the installation script to install the program and its dependencies:
