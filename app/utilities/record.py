@@ -1,5 +1,8 @@
 import os
-from picamera2.outputs import FfmpegOutput, FileOutput
+import logging
+from utilities import diagnostics
+from picamera2.outputs import FileOutput
+from utilities.video_output import RecordingOutput as FfmpegOutput
 
 
 def start_recording(cam):
@@ -17,7 +20,8 @@ def start_recording(cam):
     if cam.capturing_video:
         cam.print_to_logfile("Already capturing. Ignore")
         return False
-    cam.print_to_logfile("Capturing started")
+    diagnostics.event("recording requested")
+    cam.recording_error = None
     cam.setup_video_encoder()
     output_path = cam.make_filename(
         cam.config["video_output_path"]
@@ -33,14 +37,33 @@ def start_recording(cam):
             output_path
         )  # Set FfmpegOutput as output for video encoding to immediately get an MP4.
 
-    # Generate thumbnail.
-    cam.generate_thumbnail("v", output_path)
+    if ext.lower() != ".h264":
+        def output_failed(error):
+            # Called on the encoder thread: let the main thread stop the encoder.
+            diagnostics.event(f"FFmpeg error: {error}")
+            diagnostics.incident("FFmpeg output failed")
+            cam.recording_error = str(error)
+            logging.error("FFmpeg recording failed for %s: %s", output_path, error)
+        cam.video_encoder.output.error_callback = output_failed
 
-    cam.picam2.start_encoder(
-        cam.video_encoder, cam.video_encoder.output, name=cam.record_stream
-    )  # Start the video encoder
-    cam.capturing_video = True  # Update flag to indicate video is being captured
-    cam.set_status("video")  # Set camera status to 'video'
+    # Generate thumbnail.
+    diagnostics.event(f"thumbnail start: {output_path}")
+    cam.generate_thumbnail("v", output_path)
+    diagnostics.event("thumbnail complete; encoder starting")
+
+    try:
+        cam.picam2.start_encoder(
+            cam.video_encoder, cam.video_encoder.output, name=cam.record_stream
+        )
+    except Exception:
+        # Preserve the original exception; cleanup handles a partially started encoder.
+        cam.capturing_video = True
+        raise
+    cam.capturing_video = True
+    diagnostics.event("encoder started")
+    cam.set_status("video")
+    cam.print_to_logfile("Capturing started")
+
     return True
 
 
@@ -59,13 +82,20 @@ def stop_recording(cam):
     if not cam.capturing_video:
         cam.print_to_logfile("Already stopped. Ignore")
         return False
+    diagnostics.event("recording stop requested")
+    try:
+        if cam.video_encoder.running:
+            cam.picam2.stop_encoder(cam.video_encoder)
+        else:
+            cam.video_encoder.output.stop()
+    finally:
+        cam.capturing_video = False
+        cam.record_until = None
+        cam.reset_motion_state()
+    diagnostics.event("recording stopped")
+    cam.set_status("ready")
     cam.print_to_logfile("Capturing stopped")
-    if cam.video_encoder.running:  # Stop the encoder if it's running
-        cam.picam2.stop_encoder()
 
-    cam.capturing_video = False  # Update flag to indicate video capture has stopped
-    cam.reset_motion_state()  # Reset motion detection
-    cam.set_status("ready")  # Set camera status back to 'ready'
     return True
 
 

@@ -1,4 +1,6 @@
 import argparse
+import logging
+from utilities import diagnostics
 from core.process import start_background_process
 
 
@@ -28,6 +30,8 @@ def main(args):
 
 def run():
     """Parse arguments and execute the main function."""
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    diagnostics.configure()
     args = parse_args()
     main(args)
 

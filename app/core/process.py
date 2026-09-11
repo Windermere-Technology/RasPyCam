@@ -4,6 +4,10 @@ import subprocess
 import time
 import threading
 import signal
+import logging
+
+from utilities import diagnostics
+from utilities.command_pipe import CommandReader
 
 from picamera2 import Picamera2
 from core.model import CameraCoreModel
@@ -118,20 +122,16 @@ def parse_incoming_commands():
     Continuously checks for incoming commands from the FIFO pipe.
     Valid commands are added to the command queue.
     """
+    reader = CommandReader(CameraCoreModel.MAX_COMMAND_LEN)
     while CameraCoreModel.process_running:
-        incoming_cmd = None
-        fifo_fd = (
-            CameraCoreModel.fifo_fd
-        )  # Access the file descriptor for the FIFO pipe
-        if fifo_fd:
-            # Read and validate incoming commands from the pipe
-            incoming_cmd = read_pipe(fifo_fd)
-        if incoming_cmd:
-            print("INFO: Got a piped command: " + str(incoming_cmd))
-            # Add the valid command to the command queue
-            with CameraCoreModel.cmd_queue_lock:
-                CameraCoreModel.command_queue.append(incoming_cmd)
-        time.sleep(CameraCoreModel.fifo_interval)  # Wait before checking the pipe again
+        with CameraCoreModel.cmd_queue_lock:
+            full = len(CameraCoreModel.command_queue) >= CameraCoreModel.FIFO_MAX
+        if not full and CameraCoreModel.fifo_fd is not None:
+            incoming_cmd = read_pipe(CameraCoreModel.fifo_fd, reader)
+            if incoming_cmd:
+                with CameraCoreModel.cmd_queue_lock:
+                    CameraCoreModel.command_queue.append(incoming_cmd)
+        time.sleep(0.01)
 
 
 def make_cmd_lists(contents_str):
@@ -184,7 +184,7 @@ def make_cmd_lists(contents_str):
     return (cmd_codes, cmd_params)
 
 
-def read_pipe(fd):
+def read_pipe(fd, reader=None):
     """
     Reads data from the FIFO pipe and checks if it is a valid command.
 
@@ -194,13 +194,10 @@ def read_pipe(fd):
     Returns:
         Tuple of command and parameters if valid, otherwise False.
     """
-    # Read the contents from the pipe and remove any trailing whitespace
-    try:
-        contents = os.read(fd, CameraCoreModel.MAX_COMMAND_LEN)
-    except BlockingIOError as e:
-        print("ERROR: read_pipe(): " + str(e))
+    reader = reader if reader is not None else CommandReader(CameraCoreModel.MAX_COMMAND_LEN)
+    contents_str = reader.read(fd)
+    if not contents_str:
         return False
-    contents_str = contents.decode().rstrip()
     cmd_code = contents_str[:2]  # Extract the command code (first 2 characters)
     cmd_param = contents_str[
         3:
@@ -234,11 +231,13 @@ def pause_preview_md_threads(cams, threads):
     # Stop preview and motion-detection threads
     for t in threads:
         if t.is_alive():
-            t.join()
+            t.join(timeout=7)
+            if t.is_alive():
+                raise RuntimeError("Camera worker did not stop within 7 seconds")
     cams[CameraCoreModel.main_camera].set_status()
     # Make new threads to replace them, but don't start them until restart is called.
-    preview_thread = threading.Thread(target=show_preview, args=(cams,))
-    md_thread = threading.Thread(target=motion_detection_thread, args=(cams,))
+    preview_thread = threading.Thread(target=run_worker, args=(show_preview, cams), daemon=True)
+    md_thread = threading.Thread(target=run_worker, args=(motion_detection_thread, cams), daemon=True)
     threads.clear()
     threads.append(preview_thread)
     threads.append(md_thread)
@@ -663,103 +662,145 @@ def start_background_process(config_filepath):
         print("No attached cameras detected. Exiting program.")
         return
 
-    # Set up the cameras
     cams = {}
-    for index, c in enumerate(all_cameras):
-        if "Num" not in c:
-            c["Num"] = index
-        if CameraCoreModel.main_camera is None:
-            CameraCoreModel.main_camera = c["Num"]
-        config_file = None
-        if config_filepath:
-            if index < len(config_filepath):
-                config_file = config_filepath[index]
-        cams[c["Num"]] = CameraCoreModel(c, config_file)
-        cams[c["Num"]].print_to_logfile(
-            "Created Picamera2 instance for camera in slot " + str(c["Num"])
-        )
-    # Set up camera previews.
-    set_previews(cams)
-
-    # Setup FIFO for receiving commands
-    if not setup_fifo(cams[CameraCoreModel.main_camera].config["control_file"]):
-        cams[CameraCoreModel.main_camera].teardown()
-        return
-
-    # Setup motion pipe file
-    setup_motion_pipe(cams[CameraCoreModel.main_camera].config["motion_pipe"])
-
-    # Set the process to running
+    threads = []
+    cmd_processing_thread = None
     CameraCoreModel.process_running = True
+    CameraCoreModel.command_queue.clear()
+    try:
+        # Set up the cameras
+        for index, c in enumerate(all_cameras):
+            if "Num" not in c:
+                c["Num"] = index
+            if CameraCoreModel.main_camera is None:
+                CameraCoreModel.main_camera = c["Num"]
+            config_file = None
+            if config_filepath:
+                if index < len(config_filepath):
+                    config_file = config_filepath[index]
+            cams[c["Num"]] = CameraCoreModel(c, config_file)
+            cams[c["Num"]].print_to_logfile(
+                "Created Picamera2 instance for camera in slot " + str(c["Num"])
+            )
+        # Set up camera previews.
+        set_previews(cams)
 
-    # Write status to the status file.
-    cams[CameraCoreModel.main_camera].update_status_file()
+        # Setup FIFO for receiving commands
+        if not setup_fifo(cams[CameraCoreModel.main_camera].config["control_file"]):
+            return
 
-    # Start a thread to continuously parse incoming commands
-    cmd_processing_thread = threading.Thread(target=parse_incoming_commands)
-    cmd_processing_thread.start()
+        # Setup motion pipe file
+        setup_motion_pipe(cams[CameraCoreModel.main_camera].config["motion_pipe"])
 
-    # Create threads for preview and motion detection.
-    preview_thread = threading.Thread(target=show_preview, args=(cams,))
-    md_thread = threading.Thread(target=motion_detection_thread, args=(cams,))
+        # Write status to the status file.
+        cams[CameraCoreModel.main_camera].update_status_file()
 
-    threads = [preview_thread, md_thread]
+        # Start a thread to continuously parse incoming commands
+        cmd_processing_thread = threading.Thread(target=run_worker, args=(parse_incoming_commands,), daemon=True)
+        cmd_processing_thread.start()
 
-    # Start threads if camera is ready (autostart is not off)
-    if cams[CameraCoreModel.main_camera].current_status != "halted":
-        start_preview_md_threads(threads)
+        # Create threads for preview and motion detection.
+        preview_thread = threading.Thread(target=run_worker, args=(show_preview, cams), daemon=True)
+        md_thread = threading.Thread(target=run_worker, args=(motion_detection_thread, cams), daemon=True)
 
-    # Initialize the timelapse timer that periodically triggers the image capture.
+        threads = [preview_thread, md_thread]
 
-    # Control the timelapse interval from the system time.
-    # Get the time interval in seconds (ignore the tenths)
-    time_interval = cams[CameraCoreModel.main_camera].config["tl_interval"] / 10
-    next_time = time.time() + time_interval
+        # Start threads if camera is ready (autostart is not off)
+        if cams[CameraCoreModel.main_camera].current_status != "halted":
+            start_preview_md_threads(threads)
 
-    # Execute commands off the queue as they come in.
-    while CameraCoreModel.process_running:
-        # Check if mutex lock can be acquired (i.e. FIFO thread is not writing to the command queue)
-        # before popping from the command queue and attempting to execute. If lock can't be acquiring,
-        # skip and check on the next loop cycle instead of blocking.
-        # Without being non-blocking, anyone spamming the FIFO with commands will freeze/delay this thread.
-        cmd_queue = CameraCoreModel.command_queue
-        cmd_queue_lock = CameraCoreModel.cmd_queue_lock
-        if (
-            (cmd_queue)
-            and (cmd_queue_lock.acquire(blocking=False))
-            and (cams[CameraCoreModel.main_camera].current_status)
-        ):
-            next_cmd = CameraCoreModel.command_queue.pop(0)  # Get the next command
-            cmd_queue_lock.release()
-            execute_all_commands(cams, threads, next_cmd)
-        # Check for recording duration and stop recording if duration has elapsed.
-        for cam_index in cams:
-            cam = cams[cam_index]
-            if cam.record_until:
-                if cam.record_until <= time.monotonic():
+        # Initialize the timelapse timer that periodically triggers the image capture.
+
+        # Control the timelapse interval from the system time.
+        # Get the time interval in seconds (ignore the tenths)
+        time_interval = cams[CameraCoreModel.main_camera].config["tl_interval"] / 10
+        next_time = time.time() + time_interval
+
+        # Execute commands off the queue as they come in.
+        while CameraCoreModel.process_running:
+            # Check if mutex lock can be acquired (i.e. FIFO thread is not writing to the command queue)
+            # before popping from the command queue and attempting to execute. If lock can't be acquiring,
+            # skip and check on the next loop cycle instead of blocking.
+            # Without being non-blocking, anyone spamming the FIFO with commands will freeze/delay this thread.
+            cmd_queue = CameraCoreModel.command_queue
+            cmd_queue_lock = CameraCoreModel.cmd_queue_lock
+            if (
+                (cmd_queue)
+                and (cmd_queue_lock.acquire(blocking=False))
+            ):
+                next_cmd = CameraCoreModel.command_queue.pop(0)  # Get the next command
+                cmd_queue_lock.release()
+                diagnostics.event(f"command received: {next_cmd}")
+                execute_all_commands(cams, threads, next_cmd)
+            # Check for recording duration and stop recording if duration has elapsed.
+            for cam_index in cams:
+                cam = cams[cam_index]
+                if cam.recording_error:
+                    logging.error("Stopping failed recording: %s", cam.recording_error)
                     toggle_cam_record(cam, False)
-                    cam.record_until = None
-                    print("Video recording duration complete.")
-        # Capture timelapse images
-        if cams[CameraCoreModel.main_camera].timelapse_on:
-            if time.time() >= next_time:
-                next_time = time.time() + time_interval
-                capture_still_image(cams[CameraCoreModel.main_camera])
-        time.sleep(0.01)  # Small delay before next iteration
+                    cam.recording_error = None
+                if cam.record_until:
+                    if cam.record_until <= time.monotonic():
+                        toggle_cam_record(cam, False)
+                        cam.record_until = None
+                        print("Video recording duration complete.")
+            # Capture timelapse images
+            if cams[CameraCoreModel.main_camera].timelapse_on:
+                if time.time() >= next_time:
+                    next_time = time.time() + time_interval
+                    capture_still_image(cams[CameraCoreModel.main_camera])
+            time.sleep(0.01)  # Small delay before next iteration
 
-    print("Shutting down gracefully...")
-    for cam_index in cams:
-        cams[cam_index].current_status = "halted"
-    cmd_processing_thread.join()  # Wait for command processing thread to finish
-    for t in threads:
-        # Terminate preview and motion-detection threads.
-        if t.is_alive():
-            t.join()
-    for cam_index in cams:
-        cam = cams[cam_index]
-        cam.teardown()  # Teardown the camera and stop it
-        cam.update_status_file()  # Update the status file with halted status
-    os.close(CameraCoreModel.fifo_fd)  # Close the FIFO pipe
+    except Exception as error:
+        diagnostics.incident(f"main loop failed: {error!r}")
+        raise
+    finally:
+        shutdown(cams, ([cmd_processing_thread] if cmd_processing_thread else []) + threads)
+
+
+def run_worker(target, *args):
+    """A failed camera worker must trigger cleanup rather than leave a stale service."""
+    try:
+        target(*args)
+    except Exception:
+        diagnostics.incident(f"Camera worker {target.__name__} failed")
+        logging.exception("Camera worker %s failed", target.__name__)
+        CameraCoreModel.process_running = False
+
+
+def shutdown(cams, threads):
+    """Finalize recordings first; impose a deadline even if a driver call hangs."""
+    CameraCoreModel.process_running = False
+    for cam in cams.values():
+        cam.current_status = "halted"
+
+    def cleanup():
+        for cam in cams.values():
+            try:
+                if cam.capturing_video:
+                    toggle_cam_record(cam, False)
+            except Exception:
+                logging.exception("Failed to finalize recording")
+        for thread in threads:
+            if thread.is_alive():
+                thread.join(timeout=7)
+        for cam in cams.values():
+            try:
+                cam.teardown()
+                cam.update_status_file()
+            except Exception:
+                logging.exception("Camera teardown failed")
+        if CameraCoreModel.fifo_fd is not None:
+            os.close(CameraCoreModel.fifo_fd)
+            CameraCoreModel.fifo_fd = None
+
+    worker = threading.Thread(target=cleanup, daemon=True)
+    worker.start()
+    worker.join(timeout=20)
+    if worker.is_alive():
+        diagnostics.incident("Camera shutdown deadline exceeded")
+        logging.error("Camera shutdown exceeded 20 seconds; forcing process exit")
+        os._exit(1)
 
 
 def execute_macro_command(model, script_name, args):
@@ -785,9 +826,12 @@ def execute_macro_command(model, script_name, args):
     command = [script_path] + args
 
     try:
+        diagnostics.event(f"macro start: {script_name}")
         result = subprocess.run(command, check=True, capture_output=True, text=True)
+        diagnostics.event(f"macro complete: {script_name} exit={result.returncode}")
         print(f"Script output:\n{result.stdout}")
         return True
     except subprocess.CalledProcessError as e:
+        diagnostics.event(f"macro failed: {script_name} exit={e.returncode}")
         print(f"ERROR: Failed to execute script {script_name}. Error:\n{e.stderr}")
         return False

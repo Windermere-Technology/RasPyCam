@@ -9,6 +9,7 @@ fn_install_rpi_web()
     sudo mkdir -p RPi_Cam_Web_Interface/raspycam
     sudo cp etc/rpi-cam-web-interface/* RPi_Cam_Web_Interface/
     sudo cp -rf app/* RPi_Cam_Web_Interface/raspycam/
+    sudo cp etc/camera_service.py RPi_Cam_Web_Interface/raspycam/camera_service.py
     sudo cp etc/raspycam RPi_Cam_Web_Interface/raspycam/raspycam
     sudo ./RPi_Cam_Web_Interface/install.sh 
 }
@@ -18,6 +19,7 @@ fn_alone_install()
     echo "Alone installation"
     sudo apt install python3-opencv
     sudo cp -rf app/* /opt/vc/bin/raspycam/
+    sudo cp etc/camera_service.py /opt/vc/bin/raspycam/camera_service.py
     sudo cp etc/raspycam /opt/vc/bin/raspycam/raspycam
     sudo chmod -R 755 /opt/vc/bin/raspycam
     sudo touch /opt/vc/bin/raspycam/raspy.pid

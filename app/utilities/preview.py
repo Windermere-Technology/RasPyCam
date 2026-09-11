@@ -1,3 +1,4 @@
+from utilities import diagnostics
 import os
 import cv2
 import numpy as np
@@ -24,7 +25,8 @@ def generate_preview(cams):
                     last_h
                     == cam.picam2.camera_configuration()[cam.preview_stream]["size"][1]
                 ):
-                    img_arrs[index] = cam.picam2.capture_array(cam.preview_stream)
+                    img_arrs[index] = cam.picam2.capture_array(cam.preview_stream, wait=5.0)
+                    diagnostics.progress(f"preview:{index}")
     # If no previews enabled, do nothing.
     if not img_arrs:
         return

@@ -221,7 +221,7 @@ To stop the program, you can either send SIGINT or SIGTERM signals to the progra
 If you've launched the program using the source code, run the following command:
 
 ```bash
-sudo kill -9 $(cat /opt/vc/bin/raspycam/raspy.pid)
+sudo python3 /opt/vc/bin/raspycam/camera_service.py --stop
 ```
 
 Or if you've launched the program using the front-end, navigate to the front-end directory and run the following command, or simply press the stop button in the front-end:
@@ -272,3 +272,66 @@ Initially devleoped as part of a University project overseen by [Cian Byrne](htt
 - [Harry Le (Lê Thành Nhân)](https://github.com/NhanDotJS)
 - [Chen-Don Loi](https://github.com/Chen-Loi)
 - [Qiuda (Richard) Song](https://github.com/RichardQiudaSong)
+
+
+## Feeder reliability
+
+MP4 recordings use fragments so completed fragments remain readable after an
+interruption. The most recent fragment can still be lost. This protects new
+recordings; it does not repair previously damaged files. FFmpeg runs separately
+and receives EOF when RasPyCam exits, allowing it to finish its output.
+
+Camera preview and motion frame waits time out after five seconds. A failed
+worker triggers recording cleanup and camera shutdown, with a 20-second cleanup
+deadline. The launcher prevents duplicate instances for the same user. The
+optional `etc/restart_raspimjpg` watchdog invokes the installed
+`camera_service.py`: it checks the configured preview, allows 90 seconds for
+startup, sends SIGTERM first, and uses SIGKILL only after 30 seconds. Recovery
+logs include memory and temperature readings in the system journal. This does
+not establish or fix the underlying hardware/driver cause of camera timeouts.
+
+FIFO commands should end in a newline. Multiple commands per read and commands
+split across reads are supported. Closing the writer also terminates a legacy
+command without a newline. Concurrent writers should write each complete command
+in one write. Commands longer than 256 bytes or invalid UTF-8 are rejected.
+
+Run the camera-free reliability checks with the system Python and installed
+Picamera2/FFmpeg dependencies:
+
+```bash
+PYTHONPATH=app python3 -m unittest discover -s tests/reliability -v
+```
+
+The tests use synthetic video and do not open the camera or operate the feeder.
+
+### Incident diagnostics
+
+The camera writes failure snapshots to `/var/log/raspycam/diagnostics.log`,
+rotated at 1 MiB with three backups (about 4 MiB total, independent of the
+existing `raspy.log`). Normal frame tracking only updates in-memory counters;
+the last 128 command/recording/macro events are retained in memory. On a worker
+or main-loop failure, diagnostics capture Python thread stacks before cleanup,
+frame counts and ages, recent events, and a background system snapshot. Incident
+capture is limited to once per minute per process. System probes have two-second
+timeouts; unavailable kernel logs or power readings are recorded as unavailable.
+FFmpeg errors continue to appear in `raspy.log`; its start/exit and first frame
+are included in the diagnostic event history. Raw H.264 output does not have
+FFmpeg frame counters.
+
+The snapshot includes memory, temperature, disk space for the default media and
+application directories, power/throttling flags, and the last 60 kernel journal
+entries where permissions allow. Encoder received/written counters help identify
+blocked output writes. Macro timestamps show command execution, not physical
+motor start/stop: `feed1.sh` sends a request to a separate motor controller.
+These diagnostics do not change feeding or recording settings.
+
+Recording output now uses a dedicated FFmpeg writer with a queue limited to
+64 frames and 8 MiB of encoded data (including the frame being written). Camera
+encoder callbacks never wait for pipe writes. Each frame write has a three-second
+deadline. Queue overflow or a failed write ends that recording rather than
+silently dropping frames; the main loop stops its encoder and keeps the preview
+running when cleanup succeeds. Camera/encoder cleanup failures still use the
+existing shutdown and watchdog recovery path. FFmpeg `/proc` status, wait channel,
+syscall and I/O counters are captured on writer failure where permissions permit.
+Normal stop drains the queue for up to four seconds before canceling writes, then
+uses bounded FFmpeg process cleanup. The diagnostic log size limit is unchanged.
