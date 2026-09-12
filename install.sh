@@ -3,7 +3,7 @@
 fn_install_rpi_web()
 {   
     echo "RPI-Cam-Web-Interface installation"
-    git clone https://github.com/consiliumsolutions/RPi_Cam_Web_Interface
+    git clone https://github.com/0n3man/RPi_Cam_Web_Interface
     sleep 1
     sudo apt install python3-opencv
     sudo mkdir -p RPi_Cam_Web_Interface/raspycam
