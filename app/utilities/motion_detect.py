@@ -1,3 +1,4 @@
+from utilities import diagnostics
 import os
 import numpy as np
 from datetime import datetime
@@ -65,17 +66,15 @@ def motion_detection_thread(cams):
     while cam.current_status != "halted":
         if cam.solo_stream_mode:
             return
-        cur = cam.picam2.capture_buffer(cam.md_stream)
+        cur = cam.picam2.capture_buffer(cam.md_stream, wait=5.0)
+        diagnostics.progress("motion:main")
         cur = cur[: w * h].reshape(h, w)
         # Delay until initframes have been satisfied, unless on Monitor mode.
         if motion_init_count > 1:
             if cam.config["motion_mode"] == "monitor":
                 motion_init_count = 0
             else:
-                if prev:
-                    if (cur == prev).all():
-                        # Frame has passed
-                        motion_init_count -= 1
+                motion_init_count -= 1
                 prev = cur
                 continue
         # Main processing.

@@ -54,7 +54,7 @@ class TestRecordFunctions(unittest.TestCase):
         result = stop_recording(cam)
 
         cam.print_to_logfile.assert_called_once_with("Capturing stopped")
-        cam.picam2.stop_encoder.assert_called_once()
+        cam.picam2.stop_encoder.assert_called_once_with(cam.video_encoder)
         cam.set_status.assert_called_once_with("ready")
         self.assertTrue(result)
 

@@ -20,3 +20,9 @@ coverage_html/
 
 # MacOS
 .DS_Store
+
+# ignore GUI for now, but do want to make this part of my tree
+RPi_Cam_Web_Interface/
+
+# ignore .txt files
+*.txt

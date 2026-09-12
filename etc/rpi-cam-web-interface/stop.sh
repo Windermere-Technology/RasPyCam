@@ -41,7 +41,7 @@ source ./config.txt
 
 fn_stop ()
 { # This is function stop
-   sudo kill -9 $(cat /opt/vc/bin/raspycam/raspy.pid) 2>/dev/null
+   sudo python3 /opt/vc/bin/raspycam/camera_service.py --stop
    sudo killall php 2>/dev/null
    sudo killall motion 2>/dev/null
 }

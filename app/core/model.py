@@ -163,6 +163,7 @@ class CameraCoreModel:
         self.capturing_still = (
             False  # Flag for whether still image capture is in progress
         )
+        self.recording_error = None
         self.capturing_video = False  # Flag for whether video recording is in progress
         self.record_until = (
             None  # Time at which to stop recording. None or 0 means no timer.
